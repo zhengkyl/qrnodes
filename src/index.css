@@ -1,0 +1,5 @@
+/* Stop back navigation on scroll, html for ff, body for chrome */
+html,
+body {
+  overscroll-behavior-x: contain;
+}

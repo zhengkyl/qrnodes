@@ -1,4 +1,5 @@
 import { createSignal } from "solid-js";
+import { Canvas } from "./Canvas";
 
 function App() {
   const [leftPercent, setLeftPercent] = createSignal(50);
@@ -39,7 +40,9 @@ function App() {
         <div
           class="min-w-100px bg-red"
           style={{ width: `calc(${leftPercent()}% - 0.5px)` }}
-        ></div>
+        >
+          <Canvas />
+        </div>
         <div
           class="w-px cursor-ew-resize relative bg-stone-300 select-none after:(content-[''] block w-2 -left-1 h-full absolute z-10)"
           onPointerDown={() => {
