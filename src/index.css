@@ -3,3 +3,6 @@ html,
 body {
   overscroll-behavior-x: contain;
 }
+* {
+  --un-default-border-color: #4c4f4e;
+}
