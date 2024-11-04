@@ -11,6 +11,8 @@ import { createStore, type SetStoreFunction } from "solid-js/store";
 export type Node = {
   x: number;
   y: number;
+  width: number;
+  height: number;
   focused: boolean;
   ref: any;
 };

@@ -20,21 +20,32 @@ export function TextInput(props: InputProps) {
 }
 
 export function ResizingTextInput(
-  props: Omit<InputProps, "onInput"> & { onInput?: (e: InputEvent) => void }
+  props: Omit<InputProps, "onInput"> & {
+    onInput?: (s: string, w: number) => void;
+  }
 ) {
   const [local, rest] = splitProps(props, ["onInput"]);
-
   const [value, setValue] = createSignal(props.defaultValue);
+
+  let sizeRef: HTMLDivElement;
+
   return (
     <div>
       <TextInput
         {...rest}
         onInput={(e) => {
           setValue(e.target.value);
-          local.onInput?.(e);
+          // hotfix b/c input text placement is funky with changing start offsets
+          // adding 2px to parent width prevents random text cutoff and jitter
+          local.onInput?.(e.target.value, sizeRef.offsetWidth + 2);
         }}
       />
-      <div class="invisible h-0 px-3 border">{value()}</div>
+      <div
+        class="absolute invisible h-0 px-3 border-x whitespace-pre"
+        ref={sizeRef!}
+      >
+        {value()}
+      </div>
     </div>
   );
 }

@@ -10,8 +10,8 @@ export default defineConfig({
         // border in index.css
       },
       back: {
-        base: "#0e0f0f",
-        subtle: "#1a1b1c",
+        base: "#131212",
+        subtle: "#252323",
         distinct: "#3d3e3e",
       },
     },
