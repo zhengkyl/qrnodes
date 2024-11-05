@@ -8,43 +8,50 @@ import {
 } from "solid-js";
 import { createStore, type SetStoreFunction } from "solid-js/store";
 
-export type Node = {
+export type NodeCommon = {
+  id: number;
   x: number;
   y: number;
   width: number;
   height: number;
-  focused: boolean;
   ref: any;
 };
 
 export const NodesContext = createContext<{
-  selection: Accessor<Set<number>>;
-  setSelection: Setter<Set<number>>;
-  nodes: (Node | null)[];
-  addNode: (node: Node) => void;
+  activeIds: Accessor<number[]>;
+  setActiveIds: Setter<number[]>;
+  nodes: (NodeCommon | null)[];
+  addNode: (node: Omit<NodeCommon, "id">) => number;
   removeNode: (id: number) => void;
-  setNodes: SetStoreFunction<(Node | null)[]>;
+  setNodes: SetStoreFunction<(NodeCommon | null)[]>;
 }>();
 
 export function NodesContextProvider(props: { children: JSX.Element }) {
-  const [nodes, setNodes] = createStore<(Node | null)[]>([]);
+  const [nodes, setNodes] = createStore<(NodeCommon | null)[]>([]);
   const freeIds: number[] = [];
 
   const addNode = (node) => {
-    setNodes(freeIds.pop() ?? nodes.length, node);
+    node.id = freeIds.pop() ?? nodes.length;
+    setNodes(node.id, node);
+    return node.id;
   };
   const removeNode = (id) => {
     setNodes(id, null);
     freeIds.push(id);
   };
 
-  const [selection, setSelection] = createSignal(new Set<number>(), {
-    equals: false,
-  });
+  const [activeIds, setActiveIds] = createSignal<number[]>([]);
 
   return (
     <NodesContext.Provider
-      value={{ selection, setSelection, nodes, addNode, removeNode, setNodes }}
+      value={{
+        activeIds,
+        setActiveIds,
+        nodes,
+        addNode,
+        removeNode,
+        setNodes,
+      }}
     >
       {props.children}
     </NodesContext.Provider>
