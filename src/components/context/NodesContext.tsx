@@ -14,7 +14,16 @@ export type NodeCommon = {
   y: number;
   width: number;
   height: number;
-  ref: any;
+  ref: HTMLElement | null;
+  fields: {
+    type: string;
+    pipe: {
+      in: boolean;
+      ids: number[];
+    };
+    label: string;
+    [key: string]: any;
+  }[];
 };
 
 export const NodesContext = createContext<{

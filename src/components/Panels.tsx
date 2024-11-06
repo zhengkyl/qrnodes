@@ -19,14 +19,14 @@ export function Panels() {
 
   const onResizeX = (e: MouseEvent) => {
     const pixelWidth = flexParent.clientWidth;
-    const leftPixels = e.pageX - flexParent.offsetLeft;
+    const leftPixels = e.clientX - flexParent.offsetLeft;
     const clamped = Math.max(100, Math.min(leftPixels, pixelWidth - 100));
     setLeftPercent((clamped / pixelWidth) * 100);
   };
 
   const onResizeY = (e: MouseEvent) => {
     const pixelWidth = flexParent.clientHeight;
-    const topPixels = e.pageY - flexParent.offsetTop;
+    const topPixels = e.clientY - flexParent.offsetTop;
     const clamped = Math.max(100, Math.min(topPixels, pixelWidth - 100));
     setTopPercent((clamped / pixelWidth) * 100);
   };

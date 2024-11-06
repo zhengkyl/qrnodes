@@ -1,4 +1,5 @@
 import { Panels } from "./components/Panels";
+import { CanvasContextProvider } from "./components/context/CanvasContext";
 import { NodesContextProvider } from "./components/context/NodesContext";
 
 function App() {
@@ -7,9 +8,11 @@ function App() {
       <div>
         <h1>qrnodes</h1>
       </div>
-      <NodesContextProvider>
-        <Panels />
-      </NodesContextProvider>
+      <CanvasContextProvider>
+        <NodesContextProvider>
+          <Panels />
+        </NodesContextProvider>
+      </CanvasContextProvider>
     </div>
   );
 }

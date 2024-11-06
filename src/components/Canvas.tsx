@@ -1,95 +1,37 @@
 import { createSignal, Index, Show } from "solid-js";
 import { useNodesContext } from "./context/NodesContext";
 import { Node } from "./Node";
+import { useCanvasContext } from "./context/CanvasContext";
 
 export function Canvas() {
-  const [panning, setPanning] = createSignal(false);
-
-  const [canvasOffset, setCanvasOffset] = createSignal({ x: 0, y: 0 });
-
-  const MIN_SCALE = 0.1;
-  const MAX_SCALE = 10;
-  const [canvasScale, setCanvasScale] = createSignal(1);
-
-  const EPSILON = 0.01; // px / ms
-  const MAX_SPEED = 3; // px / ms
-  const DECELARATION = 0.002; // px / ms / ms
-  const glide = (t) => {
-    if (panning()) return;
-
-    let magnitude = Math.sqrt(vx * vx + vy * vy);
-    if (magnitude < EPSILON) return;
-
-    if (magnitude > MAX_SPEED) {
-      vx = (vx / magnitude) * MAX_SPEED;
-      vy = (vy / magnitude) * MAX_SPEED;
-      magnitude = MAX_SPEED;
-    }
-
-    const deltaT = t - prevT;
-    prevT = t;
-
-    const dv = Math.min((DECELARATION * (deltaT * deltaT)) / 2, magnitude);
-    const ratio = 1 - dv / magnitude;
-    vx *= ratio;
-    vy *= ratio;
-
-    setCanvasOffset((offset) => ({
-      x: offset.x + vx * deltaT,
-      y: offset.y + vy * deltaT,
-    }));
-
-    requestAnimationFrame(glide);
-  };
-
-  const onPanRelease = () => {
-    document.removeEventListener("pointerup", onPanRelease);
-    document.removeEventListener("pointermove", onPanMove);
-    setPanning(false);
-    requestAnimationFrame(glide);
-  };
-
-  const onPanMove = (e) => {
-    // Don't scale here, b/c translate applied before scale
-    const dx = e.pageX - prevPageX;
-    const dy = e.pageY - prevPageY;
-
-    setCanvasOffset((offset) => ({
-      x: offset.x + dx,
-      y: offset.y + dy,
-    }));
-
-    const now = performance.now();
-    const dt = now - prevT;
-
-    vx = dx / dt;
-    vy = dy / dt;
-
-    prevPageX = e.pageX;
-    prevPageY = e.pageY;
-    prevT = now;
-  };
+  const {
+    canvasScale,
+    setCanvasScale,
+    canvasOffset,
+    panning,
+    onZoom,
+    onScroll,
+    onPanStart,
+    setDragging,
+  } = useCanvasContext();
 
   let parentDiv: HTMLDivElement;
 
-  let prevT;
-  let prevPageX;
-  let prevPageY;
-  let vx;
-  let vy;
-
-  const toCanvasCoords = (pageX, pageY) => {
+  const toCanvasCoords = (clientX, clientY) => {
     const rect = parentDiv.getBoundingClientRect();
     const scale = canvasScale();
     const offset = canvasOffset();
     return {
-      x: (pageX - rect.left - offset.x) / scale,
-      y: (pageY - rect.top - offset.y) / scale,
+      x: (clientX - rect.left - offset.x) / scale,
+      y: (clientY - rect.top - offset.y) / scale,
     };
   };
 
   const { nodes, addNode, setNodes, activeIds, setActiveIds } =
     useNodesContext();
+
+  let prevClientX;
+  let prevClientY;
 
   let selectStartX;
   let selectStartY;
@@ -97,7 +39,7 @@ export function Canvas() {
   const onSelectMove = (e) => {
     let startX = selectStartX;
     let startY = selectStartY;
-    let { x: endX, y: endY } = toCanvasCoords(e.pageX, e.pageY);
+    let { x: endX, y: endY } = toCanvasCoords(e.clientX, e.clientY);
 
     if (endX < startX) {
       startX = endX;
@@ -174,10 +116,11 @@ export function Canvas() {
   const onActiveRelease = () => {
     document.removeEventListener("pointerup", onActiveRelease);
     document.removeEventListener("pointermove", onActiveMove);
+    setDragging(false);
   };
   const onActiveMove = (e: PointerEvent) => {
-    const dx = (e.pageX - prevPageX) / canvasScale();
-    const dy = (e.pageY - prevPageY) / canvasScale();
+    const dx = (e.clientX - prevClientX) / canvasScale();
+    const dy = (e.clientY - prevClientY) / canvasScale();
     activeIds().forEach((id) => {
       setNodes(id, (node) => {
         return {
@@ -197,8 +140,8 @@ export function Canvas() {
       }));
     }
 
-    prevPageX = e.pageX;
-    prevPageY = e.pageY;
+    prevClientX = e.clientX;
+    prevClientY = e.clientY;
   };
 
   const getIdsAtPoint = (x, y) => {
@@ -267,7 +210,7 @@ export function Canvas() {
       }}
       onPointerDown={(e) => {
         if (e.button === 0) {
-          const coords = toCanvasCoords(e.pageX, e.pageY);
+          const coords = toCanvasCoords(e.clientX, e.clientY);
 
           const ids = getIdsAtPoint(coords.x, coords.y);
           const active = activeIds();
@@ -283,11 +226,13 @@ export function Canvas() {
               setActiveBox(null);
             }
 
-            prevPageX = e.pageX;
-            prevPageY = e.pageY;
-            document.addEventListener("pointerup", onActiveRelease);
-            document.addEventListener("pointermove", onActiveMove);
-
+            if (e.target.tagName !== "INPUT") {
+              prevClientX = e.clientX;
+              prevClientY = e.clientY;
+              setDragging(true);
+              document.addEventListener("pointerup", onActiveRelease);
+              document.addEventListener("pointermove", onActiveMove);
+            }
             // document.addEventListener("keydown", onEsc);
           } else {
             // console.log("second");
@@ -301,43 +246,16 @@ export function Canvas() {
             document.addEventListener("pointermove", onSelectMove);
           }
         } else if (e.button === 1) {
-          prevPageX = e.pageX;
-          prevPageY = e.pageY;
-          prevT = performance.now();
-          vx = 0;
-          vy = 0;
-
-          setPanning(true);
-          document.addEventListener("pointerup", onPanRelease);
-          document.addEventListener("pointermove", onPanMove);
+          onPanStart(e);
         }
       }}
       onWheel={(e) => {
         if (e.ctrlKey || e.metaKey) {
           e.preventDefault();
-
-          const oldScale = canvasScale();
-          const newScale = Math.max(
-            MIN_SCALE,
-            Math.min(oldScale * (1 - e.deltaY / 1000), MAX_SCALE)
-          );
-          if (newScale === oldScale) return;
-
-          const rect = parentDiv.getBoundingClientRect();
-          const centerX = e.pageX - rect.left;
-          const centerY = e.pageY - rect.top;
-
-          setCanvasOffset((offset) => ({
-            x: centerX - ((centerX - offset.x) / oldScale) * newScale,
-            y: centerY - ((centerY - offset.y) / oldScale) * newScale,
-          }));
-          setCanvasScale(newScale);
+          onZoom(e);
         } else {
           if (panning()) return;
-          setCanvasOffset((prev) => ({
-            x: prev.x - e.deltaX,
-            y: prev.y - e.deltaY,
-          }));
+          onScroll(e);
           if (selectingBox() != null) {
             onSelectMove(e);
           }
@@ -345,13 +263,39 @@ export function Canvas() {
       }}
       onContextMenu={(e) => {
         e.preventDefault();
-        const coords = toCanvasCoords(e.pageX, e.pageY);
+        const coords = toCanvasCoords(e.clientX, e.clientY);
         const id = addNode({
           x: coords.x - 100,
           y: coords.y - 100,
           width: 200,
           height: 200,
           ref: null,
+          fields: [
+            {
+              type: "string",
+              pipe: {
+                in: true,
+                ids: [],
+              },
+              label: "Label1",
+            },
+            {
+              type: "number",
+              pipe: {
+                in: true,
+                ids: [],
+              },
+              label: "Label1",
+            },
+            {
+              type: "number",
+              pipe: {
+                in: false,
+                ids: [],
+              },
+              label: "Label1",
+            },
+          ],
         });
         setActiveIds([id]);
         setActiveBox(null);
@@ -369,15 +313,7 @@ export function Canvas() {
           {(node) => {
             const props = node();
             if (props == null) return;
-            return (
-              <Node
-                {...props}
-                ref={(r) => {
-                  setNodes(props.id, "ref", r);
-                }}
-                canvasScale={canvasScale()}
-              />
-            );
+            return <Node {...props} />;
           }}
         </Index>
       </div>

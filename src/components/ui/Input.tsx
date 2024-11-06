@@ -12,7 +12,7 @@ export function TextInput(props: InputProps) {
       type="text"
       class={`${
         local.class ?? ""
-      } w-full bg-back-subtle leading-none px-3 py-2 rounded-md border focus:(outline-none ring-2 ring-fore-base ring-offset-2 ring-offset-back-base)`}
+      } min-w-48 w-full bg-back-subtle leading-none px-3 py-2 rounded-md border focus:(outline-none ring-2 ring-fore-base ring-offset-2 ring-offset-back-base)`}
       value={local.defaultValue ?? ""}
       {...rest}
     />
@@ -21,7 +21,7 @@ export function TextInput(props: InputProps) {
 
 export function ResizingTextInput(
   props: Omit<InputProps, "onInput"> & {
-    onInput?: (s: string, w: number) => void;
+    onInput?: (e: InputEvent) => void;
   }
 ) {
   const [local, rest] = splitProps(props, ["onInput"]);
@@ -35,15 +35,10 @@ export function ResizingTextInput(
         {...rest}
         onInput={(e) => {
           setValue(e.target.value);
-          // hotfix b/c input text placement is funky with changing start offsets
-          // adding 2px to parent width prevents random text cutoff and jitter
-          local.onInput?.(e.target.value, sizeRef.offsetWidth + 2);
+          local.onInput?.(e);
         }}
       />
-      <div
-        class="absolute invisible h-0 px-3 border-x whitespace-pre"
-        ref={sizeRef!}
-      >
+      <div class="invisible h-0 px-3 border-x whitespace-pre" ref={sizeRef!}>
         {value()}
       </div>
     </div>
