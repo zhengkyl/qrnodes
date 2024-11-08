@@ -1,22 +1,56 @@
-import { createSignal, Index, Show } from "solid-js";
+import {
+  createContext,
+  createSignal,
+  Index,
+  Show,
+  useContext,
+  type Accessor,
+  type Setter,
+} from "solid-js";
 import { useNodesContext } from "./context/NodesContext";
 import { Node } from "./Node";
-import { useCanvasContext } from "./context/CanvasContext";
+
+export const CanvasContext = createContext<{
+  canvasScale: Accessor<number>;
+  toCanvasCoords: (clientX, clientY) => { x: number; y: number };
+  activeHandle: Accessor<(string | number)[] | null>;
+  setActiveHandle: Setter<(string | number)[] | null>;
+  setHandleCoords: Setter<{ x: number; y: number } | null>;
+  // setCanvasScale: Setter<number>;
+  // canvasOffset: Accessor<{ x: number; y: number }>;
+  // // onPanMove: () => void;
+  // // onPanRelease: () => void;
+  // panning: Accessor<boolean>;
+  // dragging: Accessor<boolean>;
+  // setDragging: Setter<boolean>;
+  // onPanStart: (e: PointerEvent) => void;
+  // onZoom: (e: WheelEvent) => void;
+  // onScroll: (e: WheelEvent) => void;
+}>();
+
+export function useCanvasContext() {
+  const context = useContext(CanvasContext);
+  if (!context) {
+    throw new Error("useCanvasContext: used outside CanvasContextProvider");
+  }
+  return context;
+}
 
 export function Canvas() {
-  const {
-    canvasScale,
-    setCanvasScale,
-    canvasOffset,
-    panning,
-    onZoom,
-    onScroll,
-    onPanStart,
-    setDragging,
-  } = useCanvasContext();
+  const [dragging, setDragging] = createSignal(false);
+  const [panning, setPanning] = createSignal(false);
+  const [canvasOffset, setCanvasOffset] = createSignal({ x: 0, y: 0 });
+  const MIN_SCALE = 0.1;
+  const MAX_SCALE = 10;
+  const [canvasScale, setCanvasScale] = createSignal(1);
+
+  let prevT;
+  let prevClientX;
+  let prevClientY;
+  let vx;
+  let vy;
 
   let parentDiv: HTMLDivElement;
-
   const toCanvasCoords = (clientX, clientY) => {
     const rect = parentDiv.getBoundingClientRect();
     const scale = canvasScale();
@@ -27,11 +61,84 @@ export function Canvas() {
     };
   };
 
+  const onPanStart = (e: PointerEvent) => {
+    prevClientX = e.clientX;
+    prevClientY = e.clientY;
+    prevT = performance.now();
+    vx = 0;
+    vy = 0;
+
+    setPanning(true);
+    document.addEventListener("pointerup", onPanRelease);
+    document.addEventListener("pointermove", onPanMove);
+  };
+
+  const onPanRelease = () => {
+    document.removeEventListener("pointerup", onPanRelease);
+    document.removeEventListener("pointermove", onPanMove);
+    setPanning(false);
+    requestAnimationFrame(glide);
+  };
+
+  const EPSILON = 0.01; // px / ms
+  const MAX_SPEED = 3; // px / ms
+  const DECELARATION = 0.002; // px / ms / ms
+  const glide = (t) => {
+    if (panning()) return;
+
+    let magnitude = Math.sqrt(vx * vx + vy * vy);
+    if (magnitude < EPSILON) return;
+
+    if (magnitude > MAX_SPEED) {
+      vx = (vx / magnitude) * MAX_SPEED;
+      vy = (vy / magnitude) * MAX_SPEED;
+      magnitude = MAX_SPEED;
+    }
+
+    const deltaT = t - prevT;
+    prevT = t;
+
+    const dv = Math.min((DECELARATION * (deltaT * deltaT)) / 2, magnitude);
+    const ratio = 1 - dv / magnitude;
+    vx *= ratio;
+    vy *= ratio;
+
+    setCanvasOffset((offset) => ({
+      x: offset.x + vx * deltaT,
+      y: offset.y + vy * deltaT,
+    }));
+
+    requestAnimationFrame(glide);
+  };
+
+  const onPanMove = (e) => {
+    // Don't scale here, b/c translate applied before scale
+    const dx = e.clientX - prevClientX;
+    const dy = e.clientY - prevClientY;
+
+    setCanvasOffset((offset) => ({
+      x: offset.x + dx,
+      y: offset.y + dy,
+    }));
+
+    const now = performance.now();
+    const dt = now - prevT;
+
+    vx = dx / dt;
+    vy = dy / dt;
+
+    prevClientX = e.clientX;
+    prevClientY = e.clientY;
+    prevT = now;
+  };
+
+  /////////////////////
+
   const { nodes, addNode, setNodes, activeIds, setActiveIds } =
     useNodesContext();
 
-  let prevClientX;
-  let prevClientY;
+  // let prevClientX;
+  // let prevClientY;
 
   let selectStartX;
   let selectStartY;
@@ -113,14 +220,9 @@ export function Canvas() {
     height: number;
   } | null>(null);
 
-  const onActiveRelease = () => {
-    document.removeEventListener("pointerup", onActiveRelease);
-    document.removeEventListener("pointermove", onActiveMove);
-    setDragging(false);
-  };
-  const onActiveMove = (e: PointerEvent) => {
-    const dx = (e.clientX - prevClientX) / canvasScale();
-    const dy = (e.clientY - prevClientY) / canvasScale();
+  // const [attached, setAttached] = createStore([]);
+
+  const moveActive = (dx, dy) => {
     activeIds().forEach((id) => {
       setNodes(id, (node) => {
         return {
@@ -139,9 +241,18 @@ export function Canvas() {
         height: box!.height,
       }));
     }
-
+  };
+  const onDragActiveMove = (e: PointerEvent) => {
+    const dx = (e.clientX - prevClientX) / canvasScale();
+    const dy = (e.clientY - prevClientY) / canvasScale();
+    moveActive(dx, dy);
     prevClientX = e.clientX;
     prevClientY = e.clientY;
+  };
+  const onDragActiveRelease = () => {
+    document.removeEventListener("pointerup", onDragActiveRelease);
+    document.removeEventListener("pointermove", onDragActiveMove);
+    setDragging(false);
   };
 
   const getIdsAtPoint = (x, y) => {
@@ -202,8 +313,17 @@ export function Canvas() {
     return candidates[0].ids;
   };
 
+  const [activeHandle, setActiveHandle] = createSignal<
+    (string | number)[] | null
+  >(null);
+  const [handleCoords, setHandleCoords] = createSignal<{
+    x: number;
+    y: number;
+  } | null>(null);
+
   return (
     <div
+      ref={parentDiv!}
       classList={{
         "w-full h-full relative overflow-hidden": true,
         "cursor-grabbing": panning(),
@@ -216,7 +336,6 @@ export function Canvas() {
           const active = activeIds();
 
           if (ids.length) {
-            // console.log("first");
             if (
               ids.length === active.length &&
               ids.every((id, i) => id === active[i])
@@ -230,12 +349,11 @@ export function Canvas() {
               prevClientX = e.clientX;
               prevClientY = e.clientY;
               setDragging(true);
-              document.addEventListener("pointerup", onActiveRelease);
-              document.addEventListener("pointermove", onActiveMove);
+              document.addEventListener("pointerup", onDragActiveRelease);
+              document.addEventListener("pointermove", onDragActiveMove);
             }
             // document.addEventListener("keydown", onEsc);
           } else {
-            // console.log("second");
             selectStartX = coords.x;
             selectStartY = coords.y;
             if (active.length) {
@@ -252,12 +370,40 @@ export function Canvas() {
       onWheel={(e) => {
         if (e.ctrlKey || e.metaKey) {
           e.preventDefault();
-          onZoom(e);
+          const oldScale = canvasScale();
+          const newScale = Math.max(
+            MIN_SCALE,
+            Math.min(oldScale * (1 - e.deltaY / 1000), MAX_SCALE)
+          );
+          if (newScale === oldScale) return;
+
+          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          const centerX = e.clientX - rect.left;
+          const centerY = e.clientY - rect.top;
+
+          setCanvasOffset((offset) => ({
+            x: centerX - ((centerX - offset.x) / oldScale) * newScale,
+            y: centerY - ((centerY - offset.y) / oldScale) * newScale,
+          }));
+          setCanvasScale(newScale);
         } else {
-          if (panning()) return;
-          onScroll(e);
+          let dx = e.deltaX;
+          let dy = e.deltaY;
+          if (e.shiftKey) {
+            dx = dy;
+            dy = 0;
+          }
+          setCanvasOffset((prev) => ({
+            x: prev.x - dx,
+            y: prev.y - dy,
+          }));
+
           if (selectingBox() != null) {
             onSelectMove(e);
+          }
+          if (dragging()) {
+            const scale = canvasScale();
+            moveActive(dx / scale, dy / scale);
           }
         }
       }}
@@ -269,87 +415,155 @@ export function Canvas() {
           y: coords.y - 100,
           width: 200,
           height: 200,
-          ref: null,
-          fields: [
-            {
+          nodeRef: null,
+          outputRef: null,
+          inputs: {
+            first: {
               type: "string",
-              pipe: {
-                in: true,
-                ids: [],
-              },
               label: "Label1",
+              value: undefined,
+              from: null,
+              cx: 0,
+              cy: 0,
             },
-            {
+            second: {
               type: "number",
-              pipe: {
-                in: true,
-                ids: [],
-              },
               label: "Label1",
+              value: undefined,
+              from: null,
+              cx: 0,
+              cy: 0,
             },
-            {
-              type: "number",
-              pipe: {
-                in: false,
-                ids: [],
-              },
-              label: "Label1",
-            },
-          ],
+          },
+          output: {
+            type: "output type",
+            label: "exit sign",
+            value: 3,
+            cx: 0,
+            cy: 0,
+          },
         });
         setActiveIds([id]);
         setActiveBox(null);
       }}
-      ref={parentDiv!}
     >
-      <div
-        class="absolute"
-        style={{
-          translate: `${canvasOffset().x}px ${canvasOffset().y}px`,
-          scale: canvasScale(),
+      <CanvasContext.Provider
+        value={{
+          canvasScale,
+          toCanvasCoords,
+          activeHandle,
+          setActiveHandle,
+          setHandleCoords,
         }}
       >
-        <Index each={nodes}>
-          {(node) => {
-            const props = node();
-            if (props == null) return;
-            return <Node {...props} />;
+        <div
+          class="absolute"
+          style={{
+            translate: `${canvasOffset().x}px ${canvasOffset().y}px`,
+            scale: canvasScale(),
           }}
-        </Index>
-      </div>
-      <div
-        class="absolute"
-        style={{
-          translate: `${canvasOffset().x}px ${canvasOffset().y}px`,
-          scale: canvasScale(),
-        }}
-      >
-        <svg class="overflow-visible w-0 h-0 z-10">
-          <Show when={selectingBox()}>
-            <rect
-              x={selectingBox()!.x}
-              y={selectingBox()!.y}
-              width={selectingBox()!.width}
-              height={selectingBox()!.height}
-              fill="rgb(244 63 94 / 0.1)"
-              stroke="rgb(244 63 94)"
-              stroke-width={1 / canvasScale()}
-            />
-          </Show>
-          <Show when={activeBox()}>
-            <rect
-              x={activeBox()!.x}
-              y={activeBox()!.y}
-              width={activeBox()!.width}
-              height={activeBox()!.height}
-              fill="none"
-              stroke="rgb(244 63 94)"
-              stroke-width={1 / canvasScale()}
-              stroke-dasharray={`${5 / canvasScale()} ${5 / canvasScale()}`}
-            />
-          </Show>
-        </svg>
-      </div>
+        >
+          <Index each={nodes}>
+            {(node) => {
+              const props = node();
+              if (props == null) return;
+              return <Node {...props} />;
+            }}
+          </Index>
+          <svg class="absolute overflow-visible pointer-events-none">
+            <Show when={activeHandle()}>
+              {(handle) => {
+                let path = handle();
+                const node = nodes[path[0]];
+                let curr = node;
+                for (let i = 1; i < path.length; i++) {
+                  curr = curr[path[i]];
+                }
+                // console.log("active Handle", node, curr);
+                //
+
+                const off = 10;
+                const d = () => {
+                  const endX = node.x + curr.cx - off;
+                  const endY = node.y + curr.cy;
+                  const start = handleCoords()!;
+                  const startX = start.x + off;
+                  const startY = start.y;
+
+                  let out = (endX - startX) / 2;
+                  if (out < 0) {
+                    out = Math.min(Math.max(-out, 15), 200);
+                  } else {
+                    out = Math.max(out, 15);
+                  }
+                  return `M ${endX} ${endY} C ${endX - out} ${endY} ${
+                    startX + out
+                  } ${startY} ${startX} ${startY}`;
+                };
+                return (
+                  <>
+                    <path
+                      fill="none"
+                      stroke="rgb(137 137 137)"
+                      stroke-width={4}
+                      stroke-dasharray="8 12"
+                      stroke-linecap="round"
+                      d={d()}
+                    >
+                      <animate
+                        attributeName="stroke-dashoffset"
+                        from="0"
+                        to="20"
+                        dur="800ms"
+                        repeatCount="indefinite"
+                      />
+                    </path>
+                    <circle
+                      cx={node.x + curr.cx}
+                      cy={node.y + curr.cy}
+                      r="10"
+                      fill="red"
+                    />
+                    <circle
+                      cx={handleCoords()!.x}
+                      cy={handleCoords()!.y}
+                      r="10"
+                      fill="red"
+                    />
+                  </>
+                );
+              }}
+            </Show>
+          </svg>
+          <svg class="absolute overflow-visible pointer-events-none">
+            <Show when={activeBox()}>
+              <rect
+                x={activeBox()!.x}
+                y={activeBox()!.y}
+                width={activeBox()!.width}
+                height={activeBox()!.height}
+                fill="none"
+                stroke="rgb(244 63 94)"
+                stroke-width={1 / canvasScale()}
+                stroke-dasharray={`${5 / canvasScale()} ${5 / canvasScale()}`}
+              />
+            </Show>
+          </svg>
+          <svg class="absolute overflow-visible pointer-events-none">
+            <Show when={selectingBox()}>
+              <rect
+                x={selectingBox()!.x}
+                y={selectingBox()!.y}
+                width={selectingBox()!.width}
+                height={selectingBox()!.height}
+                fill="rgb(244 63 94 / 0.1)"
+                stroke="rgb(244 63 94)"
+                stroke-width={1 / canvasScale()}
+              />
+            </Show>
+          </svg>
+        </div>
+      </CanvasContext.Provider>
     </div>
   );
 }

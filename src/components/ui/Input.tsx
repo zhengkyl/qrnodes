@@ -38,7 +38,7 @@ export function ResizingTextInput(
           local.onInput?.(e);
         }}
       />
-      <div class="invisible h-0 px-3 border-x whitespace-pre" ref={sizeRef!}>
+      <div ref={sizeRef!} class="invisible h-0 px-3 border-x whitespace-pre">
         {value()}
       </div>
     </div>

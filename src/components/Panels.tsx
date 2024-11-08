@@ -31,7 +31,7 @@ export function Panels() {
     setTopPercent((clamped / pixelWidth) * 100);
   };
   return (
-    <div class="w-full h-full flex relative" ref={flexParent!}>
+    <div ref={flexParent!} class="w-full h-full flex relative">
       <div
         class="min-w-100px bg-back-base"
         style={{ width: `calc(${leftPercent()}% - 0.5px)` }}
