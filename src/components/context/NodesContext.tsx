@@ -24,7 +24,7 @@ export type NodeCommon = {
       from: null | number;
       cx: number; // relative to node
       cy: number; // relative to node
-      [key: string]: any;
+      // [key: string]: any;
     };
   };
   output: {

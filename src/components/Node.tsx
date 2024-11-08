@@ -7,9 +7,14 @@ import { createStore } from "solid-js/store";
 type NodeProps = NodeCommon;
 
 export function Node(props: NodeProps) {
-  const { canvasScale, toCanvasCoords, setActiveHandle, setHandleCoords } =
-    useCanvasContext();
-  const { setNodes, activeIds } = useNodesContext();
+  const {
+    canvasScale,
+    toCanvasCoords,
+    setActiveHandle,
+    setHandleCoords,
+    setGhostHead,
+  } = useCanvasContext();
+  const { nodes, setNodes, activeIds } = useNodesContext();
 
   let prevX;
   let prevY;
@@ -79,6 +84,7 @@ export function Node(props: NodeProps) {
           class="fill-none stroke-rose-500"
           width={props.width}
           height={props.height}
+          stroke-width={2 / canvasScale()}
         />
       </svg>
       <div class="flex flex-col gap-4">
@@ -96,21 +102,65 @@ export function Node(props: NodeProps) {
                     <svg
                       class="absolute overflow-visible w-full h-full"
                       onPointerDown={(e) => {
-                        console.log("pdown");
                         e.stopImmediatePropagation();
 
-                        console.log("set activehandle");
                         const coords = toCanvasCoords(e.clientX, e.clientY);
                         setHandleCoords(coords);
                         // set after b/c show trigger
-                        setActiveHandle([props.id, "inputs", key]);
+                        setActiveHandle([props.id, key]);
 
                         // const { x: startX, y: startY } = toCanvasCoords(
                         //   e.clientX,
                         //   e.clientY
                         // );
+                        const validHeadSlots = nodes.filter(
+                          (node) =>
+                            node != null &&
+                            node.id !== props.id &&
+                            node.output.type === input.type
+                        ) as NodeCommon[];
+
+                        const R_SQUARED = 20 * 20;
                         const onMoveHead = (e: PointerEvent) => {
                           const coords = toCanvasCoords(e.clientX, e.clientY);
+
+                          const overlaps: { dist: number; id: number }[] = [];
+                          validHeadSlots.forEach((node) => {
+                            const cx = node.x + node.output.cx;
+                            const cy = node.y + node.output.cy;
+
+                            const dx = coords.x - cx;
+                            const dy = coords.y - cy;
+                            const d2 = dx * dx + dy * dy;
+                            if (d2 < R_SQUARED) {
+                              overlaps.push({ dist: d2, id: node.id });
+                            }
+                          });
+
+                          if (overlaps.length) {
+                            for (let i = 1; i < overlaps.length; i++) {
+                              if (overlaps[i].dist < overlaps[0].dist) {
+                                overlaps[0].dist = overlaps[i].dist;
+                                overlaps[0].id = overlaps[i].id;
+                              }
+                            }
+                            // setGhostHead(overlaps[0].id);
+                            console.log("overlaps", overlaps[0].id);
+                            setNodes(
+                              props.id,
+                              "inputs",
+                              key,
+                              "from",
+                              overlaps[0].id
+                            );
+
+                            console.log(nodes[props.id]?.inputs[key].from);
+                          } else {
+                            // setGhostHead(null);
+                            console.log("overlaps nothing");
+                            setNodes(props.id, "inputs", key, "from", null);
+                          }
+
                           setHandleCoords(coords);
                           // console.log("moveHead", x - startX, y - startY);
                           // setHeadPos(i(), { x: x - startX, y: y - startY });
@@ -125,7 +175,7 @@ export function Node(props: NodeProps) {
                             "pointerup",
                             onReleaseHead
                           );
-                          // setActiveHandle(null);
+                          setActiveHandle(null);
                           // setHeadPos(null);
                         };
 

@@ -1,5 +1,6 @@
 import {
   createContext,
+  createMemo,
   createSignal,
   Index,
   Show,
@@ -16,6 +17,9 @@ export const CanvasContext = createContext<{
   activeHandle: Accessor<(string | number)[] | null>;
   setActiveHandle: Setter<(string | number)[] | null>;
   setHandleCoords: Setter<{ x: number; y: number } | null>;
+
+  setGhostHead: Setter<number | null>;
+  setGhostTail: Setter<(string | number)[] | null>;
   // setCanvasScale: Setter<number>;
   // canvasOffset: Accessor<{ x: number; y: number }>;
   // // onPanMove: () => void;
@@ -302,16 +306,19 @@ export function Canvas() {
     if (candidates.length === 0) {
       return [];
     }
-    if (candidates.length > 1) {
-      for (const cand of candidates) {
-        if (cand.dist < candidates[0].dist) {
-          candidates[0].dist = cand.dist;
-          candidates[0].ids = cand.ids;
-        }
+    for (let i = 1; i < candidates.length; i++) {
+      if (candidates[i].dist < candidates[0].dist) {
+        candidates[0].dist = candidates[i].dist;
+        candidates[0].ids = candidates[i].ids;
       }
     }
     return candidates[0].ids;
   };
+
+  const [ghostHead, setGhostHead] = createSignal<number | null>(null);
+  const [ghostTail, setGhostTail] = createSignal<(string | number)[] | null>(
+    null
+  );
 
   const [activeHandle, setActiveHandle] = createSignal<
     (string | number)[] | null
@@ -436,7 +443,7 @@ export function Canvas() {
             },
           },
           output: {
-            type: "output type",
+            type: "string",
             label: "exit sign",
             value: 3,
             cx: 0,
@@ -454,6 +461,9 @@ export function Canvas() {
           activeHandle,
           setActiveHandle,
           setHandleCoords,
+          //
+          setGhostHead,
+          setGhostTail,
         }}
       >
         <div
@@ -470,71 +480,79 @@ export function Canvas() {
               return <Node {...props} />;
             }}
           </Index>
-          <svg class="absolute overflow-visible pointer-events-none">
-            <Show when={activeHandle()}>
-              {(handle) => {
-                let path = handle();
-                const node = nodes[path[0]];
-                let curr = node;
-                for (let i = 1; i < path.length; i++) {
-                  curr = curr[path[i]];
-                }
-                // console.log("active Handle", node, curr);
-                //
+          <Index each={nodes}>
+            {(node) => {
+              const curr = node();
+              if (curr == null) return;
+              return (
+                <Index each={Object.entries(curr.inputs)}>
+                  {(entry) => {
+                    const [key, input] = entry();
+                    const off = 10;
+                    const changing = () => {
+                      const path = activeHandle();
+                      console.log(
+                        "changing check",
+                        path != null && path[0] === curr.id && path[1] === key
+                      );
+                      return (
+                        path != null && path[0] === curr.id && path[1] === key
+                      );
+                    };
+                    const d = () => {
+                      const end = input;
 
-                const off = 10;
-                const d = () => {
-                  const endX = node.x + curr.cx - off;
-                  const endY = node.y + curr.cy;
-                  const start = handleCoords()!;
-                  const startX = start.x + off;
-                  const startY = start.y;
+                      const endX = curr.x + end.cx + -off;
+                      const endY = curr.y + end.cy;
 
-                  let out = (endX - startX) / 2;
-                  if (out < 0) {
-                    out = Math.min(Math.max(-out, 15), 200);
-                  } else {
-                    out = Math.max(out, 15);
-                  }
-                  return `M ${endX} ${endY} C ${endX - out} ${endY} ${
-                    startX + out
-                  } ${startY} ${startX} ${startY}`;
-                };
-                return (
-                  <>
-                    <path
-                      fill="none"
-                      stroke="rgb(137 137 137)"
-                      stroke-width={4}
-                      stroke-dasharray="8 12"
-                      stroke-linecap="round"
-                      d={d()}
-                    >
-                      <animate
-                        attributeName="stroke-dashoffset"
-                        from="0"
-                        to="20"
-                        dur="800ms"
-                        repeatCount="indefinite"
-                      />
-                    </path>
-                    <circle
-                      cx={node.x + curr.cx}
-                      cy={node.y + curr.cy}
-                      r="10"
-                      fill="red"
-                    />
-                    <circle
-                      cx={handleCoords()!.x}
-                      cy={handleCoords()!.y}
-                      r="10"
-                      fill="red"
-                    />
-                  </>
-                );
-              }}
-            </Show>
-          </svg>
+                      let startX, startY;
+                      if (end.from != null) {
+                        const start = nodes[end.from!]!;
+                        startX = start.x + start.output.cx + off;
+                        startY = start.y + start.output.cx;
+                      } else if (changing()) {
+                        const coords = handleCoords()!;
+                        startX = coords.x + off;
+                        startY = coords.y;
+                      }
+
+                      let out = (endX - startX) / 2;
+                      if (out < 0) {
+                        out = Math.min(Math.max(-out, 15), 200);
+                      } else {
+                        out = Math.max(out, 15);
+                      }
+                      return `M ${endX} ${endY} C ${endX - out} ${endY} ${
+                        startX + out
+                      } ${startY} ${startX} ${startY}`;
+                    };
+                    return (
+                      <Show when={input.from != null || changing()}>
+                        <svg class="absolute overflow-visible pointer-events-none">
+                          <path
+                            fill="none"
+                            stroke="rgb(137 137 137)"
+                            stroke-width={4}
+                            stroke-dasharray="8 12"
+                            stroke-linecap="round"
+                            d={d()}
+                          >
+                            <animate
+                              attributeName="stroke-dashoffset"
+                              from="0"
+                              to="20"
+                              dur="800ms"
+                              repeatCount="indefinite"
+                            />
+                          </path>
+                        </svg>
+                      </Show>
+                    );
+                  }}
+                </Index>
+              );
+            }}
+          </Index>
           <svg class="absolute overflow-visible pointer-events-none">
             <Show when={activeBox()}>
               <rect
