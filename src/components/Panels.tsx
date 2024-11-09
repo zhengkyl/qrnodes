@@ -2,7 +2,7 @@ import { createSignal } from "solid-js";
 import { Canvas } from "./Canvas";
 
 export function Panels() {
-  const [leftPercent, setLeftPercent] = createSignal(50);
+  const [leftPercent, setLeftPercent] = createSignal(90);
   const [topPercent, setTopPercent] = createSignal(50);
 
   let flexParent: HTMLDivElement;

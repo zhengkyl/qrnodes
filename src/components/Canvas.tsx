@@ -1,6 +1,5 @@
 import {
   createContext,
-  createMemo,
   createSignal,
   Index,
   Show,
@@ -14,12 +13,9 @@ import { Node } from "./Node";
 export const CanvasContext = createContext<{
   canvasScale: Accessor<number>;
   toCanvasCoords: (clientX, clientY) => { x: number; y: number };
-  activeHandle: Accessor<(string | number)[] | null>;
-  setActiveHandle: Setter<(string | number)[] | null>;
   setHandleCoords: Setter<{ x: number; y: number } | null>;
-
   setGhostHead: Setter<number | null>;
-  setGhostTail: Setter<(string | number)[] | null>;
+  setGhostTail: Setter<[number, string] | null>;
   // setCanvasScale: Setter<number>;
   // canvasOffset: Accessor<{ x: number; y: number }>;
   // // onPanMove: () => void;
@@ -31,6 +27,25 @@ export const CanvasContext = createContext<{
   // onZoom: (e: WheelEvent) => void;
   // onScroll: (e: WheelEvent) => void;
 }>();
+
+const BEZIER_HANDLE = 8;
+function connectPath(startX, startY, endX, endY) {
+  let dx = endX - startX;
+  let dy = endY - startY;
+
+  let handle = dx / 2;
+
+  const minX = Math.min(Math.abs(dy) / 2, 5);
+
+  if (handle < 0) {
+    handle = Math.min(Math.max(-handle, minX), 200);
+  } else {
+    handle = Math.max(handle, minX);
+  }
+  return `M ${endX} ${endY} C ${endX - handle} ${endY} ${
+    startX + handle
+  } ${startY} ${startX} ${startY}`;
+}
 
 export function useCanvasContext() {
   const context = useContext(CanvasContext);
@@ -316,13 +331,11 @@ export function Canvas() {
   };
 
   const [ghostHead, setGhostHead] = createSignal<number | null>(null);
-  const [ghostTail, setGhostTail] = createSignal<(string | number)[] | null>(
-    null
-  );
+  const [ghostTail, setGhostTail] = createSignal<[number, string] | null>(null);
 
-  const [activeHandle, setActiveHandle] = createSignal<
-    (string | number)[] | null
-  >(null);
+  // const [activeHandle, setActiveHandle] = createSignal<
+  //   (string | number)[] | null
+  // >(null);
   const [handleCoords, setHandleCoords] = createSignal<{
     x: number;
     y: number;
@@ -422,8 +435,6 @@ export function Canvas() {
           y: coords.y - 100,
           width: 200,
           height: 200,
-          nodeRef: null,
-          outputRef: null,
           inputs: {
             first: {
               type: "string",
@@ -458,10 +469,7 @@ export function Canvas() {
         value={{
           canvasScale,
           toCanvasCoords,
-          activeHandle,
-          setActiveHandle,
           setHandleCoords,
-          //
           setGhostHead,
           setGhostTail,
         }}
@@ -475,59 +483,23 @@ export function Canvas() {
         >
           <Index each={nodes}>
             {(node) => {
-              const props = node();
-              if (props == null) return;
-              return <Node {...props} />;
-            }}
-          </Index>
-          <Index each={nodes}>
-            {(node) => {
               const curr = node();
               if (curr == null) return;
               return (
                 <Index each={Object.entries(curr.inputs)}>
                   {(entry) => {
-                    const [key, input] = entry();
-                    const off = 10;
-                    const changing = () => {
-                      const path = activeHandle();
-                      console.log(
-                        "changing check",
-                        path != null && path[0] === curr.id && path[1] === key
-                      );
-                      return (
-                        path != null && path[0] === curr.id && path[1] === key
-                      );
-                    };
+                    const [_, input] = entry();
                     const d = () => {
-                      const end = input;
-
-                      const endX = curr.x + end.cx + -off;
-                      const endY = curr.y + end.cy;
-
-                      let startX, startY;
-                      if (end.from != null) {
-                        const start = nodes[end.from!]!;
-                        startX = start.x + start.output.cx + off;
-                        startY = start.y + start.output.cx;
-                      } else if (changing()) {
-                        const coords = handleCoords()!;
-                        startX = coords.x + off;
-                        startY = coords.y;
-                      }
-
-                      let out = (endX - startX) / 2;
-                      if (out < 0) {
-                        out = Math.min(Math.max(-out, 15), 200);
-                      } else {
-                        out = Math.max(out, 15);
-                      }
-                      return `M ${endX} ${endY} C ${endX - out} ${endY} ${
-                        startX + out
-                      } ${startY} ${startX} ${startY}`;
+                      const headId = input.from!;
+                      const start = nodes[headId]!;
+                      const startX = start.x + start.output.cx + BEZIER_HANDLE;
+                      const startY = start.y + start.output.cy;
+                      const endX = curr.x + input.cx + -BEZIER_HANDLE;
+                      const endY = curr.y + input.cy;
+                      return connectPath(startX, startY, endX, endY);
                     };
                     return (
-                      <Show when={input.from != null || changing()}>
+                      <Show when={input.from != null}>
                         <svg class="absolute overflow-visible pointer-events-none">
                           <path
                             fill="none"
@@ -551,6 +523,51 @@ export function Canvas() {
                   }}
                 </Index>
               );
+            }}
+          </Index>
+          <Show when={(ghostHead() == null) != (ghostTail() == null)}>
+            {(_) => {
+              const d = () => {
+                let startX, startY, endX, endY;
+                const otherCoords = handleCoords()!;
+
+                const headId = ghostHead();
+                if (headId != null) {
+                  const node = nodes[headId]!;
+                  startX = node.x + node.output.cx + BEZIER_HANDLE;
+                  startY = node.y + node.output.cy;
+                  endX = otherCoords.x - BEZIER_HANDLE;
+                  endY = otherCoords.y;
+                } else {
+                  const tailPath = ghostTail()!;
+                  const node = nodes[tailPath[0]]!;
+                  const input = node.inputs[tailPath[1]];
+                  endX = node.x + input.cx - BEZIER_HANDLE;
+                  endY = node.y + input.cy;
+                  startX = otherCoords.x + BEZIER_HANDLE;
+                  startY = otherCoords.y;
+                }
+                return connectPath(startX, startY, endX, endY);
+              };
+              return (
+                <svg class="absolute overflow-visible pointer-events-none">
+                  <path
+                    fill="none"
+                    stroke="rgb(137 137 137)"
+                    stroke-width={4}
+                    stroke-dasharray="8 12"
+                    stroke-linecap="round"
+                    d={d()}
+                  />
+                </svg>
+              );
+            }}
+          </Show>
+          <Index each={nodes}>
+            {(node) => {
+              const props = node();
+              if (props == null) return;
+              return <Node {...props} />;
             }}
           </Index>
           <svg class="absolute overflow-visible pointer-events-none">

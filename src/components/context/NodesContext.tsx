@@ -14,8 +14,8 @@ export type NodeCommon = {
   y: number;
   width: number;
   height: number;
-  nodeRef: HTMLElement | null;
-  outputRef: HTMLElement | null;
+  // nodeRef: HTMLElement | null;
+  // outputRef: HTMLElement | null;
   inputs: {
     [key: string]: {
       type: string;
