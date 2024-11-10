@@ -9,6 +9,7 @@ import {
 } from "solid-js";
 import { useNodesContext } from "./context/NodesContext";
 import { Node } from "./Node";
+import { fuqrNode, textNode } from "./nodes/factory";
 
 export const CanvasContext = createContext<{
   canvasScale: Accessor<number>;
@@ -156,9 +157,6 @@ export function Canvas() {
   const { nodes, addNode, setNodes, activeIds, setActiveIds } =
     useNodesContext();
 
-  // let prevClientX;
-  // let prevClientY;
-
   let selectStartX;
   let selectStartY;
 
@@ -238,8 +236,6 @@ export function Canvas() {
     width: number;
     height: number;
   } | null>(null);
-
-  // const [attached, setAttached] = createStore([]);
 
   const moveActive = (dx, dy) => {
     activeIds().forEach((id) => {
@@ -430,37 +426,16 @@ export function Canvas() {
       onContextMenu={(e) => {
         e.preventDefault();
         const coords = toCanvasCoords(e.clientX, e.clientY);
-        const id = addNode({
-          x: coords.x - 100,
-          y: coords.y - 100,
-          width: 200,
-          height: 200,
-          inputs: {
-            first: {
-              type: "string",
-              label: "Label1",
-              value: undefined,
-              from: null,
-              cx: 0,
-              cy: 0,
-            },
-            second: {
-              type: "number",
-              label: "Label1",
-              value: undefined,
-              from: null,
-              cx: 0,
-              cy: 0,
-            },
-          },
-          output: {
-            type: "string",
-            label: "exit sign",
-            value: 3,
-            cx: 0,
-            cy: 0,
-          },
-        });
+        const id = addNode(
+          fuqrNode({
+            x: coords.x - 100,
+            y: coords.y - 100,
+          })
+          // textNode({
+          //   x: coords.x - 100,
+          //   y: coords.y - 100,
+          // })
+        );
         setActiveIds([id]);
         setActiveBox(null);
       }}
@@ -489,35 +464,40 @@ export function Canvas() {
                 <Index each={Object.entries(curr.inputs)}>
                   {(entry) => {
                     const [_, input] = entry();
-                    const d = () => {
-                      const headId = input.from!;
-                      const start = nodes[headId]!;
-                      const startX = start.x + start.output.cx + BEZIER_HANDLE;
-                      const startY = start.y + start.output.cy;
-                      const endX = curr.x + input.cx + -BEZIER_HANDLE;
-                      const endY = curr.y + input.cy;
-                      return connectPath(startX, startY, endX, endY);
-                    };
                     return (
                       <Show when={input.from != null}>
-                        <svg class="absolute overflow-visible pointer-events-none">
-                          <path
-                            fill="none"
-                            stroke="rgb(137 137 137)"
-                            stroke-width={4}
-                            stroke-dasharray="8 12"
-                            stroke-linecap="round"
-                            d={d()}
-                          >
-                            <animate
-                              attributeName="stroke-dashoffset"
-                              from="0"
-                              to="20"
-                              dur="800ms"
-                              repeatCount="indefinite"
-                            />
-                          </path>
-                        </svg>
+                        {(_) => {
+                          const headId = input.from!;
+                          const start = nodes[headId]!;
+                          const d = () => {
+                            const startX =
+                              start.x + start.output.cx + BEZIER_HANDLE;
+                            const startY = start.y + start.output.cy;
+                            const endX = curr.x + input.cx + -BEZIER_HANDLE;
+                            const endY = curr.y + input.cy;
+                            return connectPath(startX, startY, endX, endY);
+                          };
+                          return (
+                            <svg class="absolute overflow-visible pointer-events-none">
+                              <path
+                                fill="none"
+                                stroke="rgb(137 137 137)"
+                                stroke-width={4}
+                                stroke-dasharray="8 12"
+                                stroke-linecap="round"
+                                d={d()}
+                              >
+                                <animate
+                                  attributeName="stroke-dashoffset"
+                                  from="0"
+                                  to="20"
+                                  dur="800ms"
+                                  repeatCount="indefinite"
+                                />
+                              </path>
+                            </svg>
+                          );
+                        }}
                       </Show>
                     );
                   }}
@@ -570,6 +550,36 @@ export function Canvas() {
               return <Node {...props} />;
             }}
           </Index>
+          <svg class="absolute overflow-visible pointer-events-none">
+            <Show when={ghostHead() != null}>
+              {(_) => {
+                const node = nodes[ghostHead()!]!;
+                return (
+                  <circle
+                    cx={node.x + node.output.cx}
+                    cy={node.y + node.output.cy}
+                    r="7"
+                    fill="white"
+                  />
+                );
+              }}
+            </Show>
+            <Show when={ghostTail() != null}>
+              {(_) => {
+                const path = ghostTail()!;
+                const node = nodes[path[0]]!;
+                const input = node.inputs[path[1]];
+                return (
+                  <circle
+                    cx={node.x + input.cx}
+                    cy={node.y + input.cy}
+                    r="7"
+                    fill="white"
+                  />
+                );
+              }}
+            </Show>
+          </svg>
           <svg class="absolute overflow-visible pointer-events-none">
             <Show when={activeBox()}>
               <rect

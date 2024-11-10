@@ -1,5 +1,6 @@
 import { createSignal } from "solid-js";
 import { Canvas } from "./Canvas";
+import { Preview } from "./Preview";
 
 export function Panels() {
   const [leftPercent, setLeftPercent] = createSignal(90);
@@ -50,9 +51,16 @@ export function Panels() {
         style={{ width: `calc(${100 - leftPercent()}% - 0.5px)` }}
       >
         <div
-          class="min-h-100px bg-green"
-          style={{ height: `calc(${topPercent()}% - 0.5px)` }}
-        ></div>
+          class="min-h-100px"
+          style={{
+            height: `calc(${topPercent()}% - 0.5px)`,
+            background: `repeating-conic-gradient(#ddd 0% 25%, #aaa 25% 50%)`,
+            "background-size": "4rem 4rem",
+            "background-position": "center",
+          }}
+        >
+          <Preview />
+        </div>
         <div
           class="h-px cursor-ns-resize relative bg-stone-300 select-none after:(content-[''] block h-2 -top-1 w-full absolute z-10)"
           onPointerDown={() => {

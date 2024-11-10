@@ -21,7 +21,7 @@ export function TextInput(props: InputProps) {
 
 export function ResizingTextInput(
   props: Omit<InputProps, "onInput"> & {
-    onInput?: (e: InputEvent) => void;
+    onInput?: JSX.EventHandler<HTMLInputElement, InputEvent>;
   }
 ) {
   const [local, rest] = splitProps(props, ["onInput"]);

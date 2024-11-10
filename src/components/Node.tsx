@@ -1,6 +1,6 @@
 import { ResizingTextInput, TextInput } from "./ui/Input";
 import { useNodesContext, type NodeCommon } from "./context/NodesContext";
-import { batch, For, onMount, Show } from "solid-js";
+import { batch, For, onMount } from "solid-js";
 import { useCanvasContext } from "./Canvas";
 
 type NodeProps = NodeCommon;
@@ -17,7 +17,7 @@ export function Node(props: NodeProps) {
   } = useCanvasContext();
   const { nodes, setNodes, activeIds } = useNodesContext();
 
-  onMount(() => {
+  const updateNodePos = () => {
     const scale = canvasScale();
     const rect = nodeRef.getBoundingClientRect();
     setNodes(props.id, {
@@ -46,7 +46,9 @@ export function Node(props: NodeProps) {
       cx: x - props.x,
       cy: y - props.y,
     });
-  });
+  };
+
+  onMount(updateNodePos);
 
   let nodeRef: HTMLDivElement;
   const inputHandleRefs: HTMLDivElement[] = [];
@@ -143,6 +145,21 @@ export function Node(props: NodeProps) {
     document.addEventListener("pointerup", onReleaseTail);
   };
 
+  const outputValue = () => {
+    const inputs = {};
+    Object.entries(props.inputs).forEach(([key, input]) => {
+      if (input.from != null) {
+        inputs[key] = nodes[input.from]!.output.value;
+      } else {
+        inputs[key] = input.value;
+      }
+    });
+    const output = props.function(inputs);
+    setNodes(props.id, "output", "value", output);
+    // console.log("calc outputValue", props.id, inputs, output);
+    return output;
+  };
+
   return (
     <div
       ref={nodeRef!}
@@ -156,6 +173,7 @@ export function Node(props: NodeProps) {
       <svg
         classList={{
           "absolute overflow-visible pointer-events-none": true,
+          // TODO store active state somewhere?
           hidden: !activeIds().includes(props.id),
         }}
         style={{
@@ -173,113 +191,111 @@ export function Node(props: NodeProps) {
         />
       </svg>
       <div class="flex flex-col gap-4">
+        <div class="select-none font-bold leading-none">{props.title}</div>
         <For each={Object.entries(props.inputs)}>
           {([key, input], i) => {
             return (
               <div>
-                <div class="select-none">{input.label}</div>
+                <div class="select-none text-sm">{input.label}</div>
                 <div class="flex items-center">
                   <div
                     ref={inputHandleRefs[i()]}
                     class="absolute rounded-full -left-2 w-4 h-4 border bg-back-subtle"
-                  >
-                    <svg
-                      class="absolute overflow-visible w-full h-full"
-                      onPointerDown={(e) => {
-                        e.stopImmediatePropagation();
-                        const coords = toCanvasCoords(e.clientX, e.clientY);
-                        setHandleCoords(coords);
+                    onPointerDown={(e) => {
+                      e.stopImmediatePropagation();
+                      const coords = toCanvasCoords(e.clientX, e.clientY);
+                      setHandleCoords(coords);
 
-                        let fromId = input.from;
-                        if (fromId != null) {
-                          setGhostHead(fromId);
-                          setNodes(props.id, "inputs", key, "from", null);
-                          onPointerDownTail(fromId, [props.id, key]);
-                        } else {
-                          const toPath = [props.id, key] as [number, string];
-                          setGhostTail(toPath);
+                      let fromId = input.from;
+                      if (fromId != null) {
+                        setGhostHead(fromId);
+                        setNodes(props.id, "inputs", key, "from", null);
+                        onPointerDownTail(fromId, [props.id, key]);
+                      } else {
+                        const toPath = [props.id, key] as [number, string];
+                        setGhostTail(toPath);
 
-                          // TODO depth list
-                          const validHeadSlots = nodes.filter(
-                            (node) =>
-                              node != null &&
-                              node.id !== props.id &&
-                              node.output.type === input.type
-                          ) as NodeCommon[];
+                        // TODO depth list
+                        const validHeadSlots = nodes.filter(
+                          (node) =>
+                            node != null &&
+                            node.id !== props.id &&
+                            node.output.type === input.type
+                        ) as NodeCommon[];
 
-                          const onMoveHead = (e: PointerEvent) => {
-                            const coords = toCanvasCoords(e.clientX, e.clientY);
-                            setHandleCoords(coords);
+                        const onMoveHead = (e: PointerEvent) => {
+                          const coords = toCanvasCoords(e.clientX, e.clientY);
+                          setHandleCoords(coords);
 
-                            const overlaps: { dist: number; id: number }[] = [];
-                            validHeadSlots.forEach((node) => {
-                              const cx = node.x + node.output.cx;
-                              const cy = node.y + node.output.cy;
+                          const overlaps: { dist: number; id: number }[] = [];
+                          validHeadSlots.forEach((node) => {
+                            const cx = node.x + node.output.cx;
+                            const cy = node.y + node.output.cy;
 
-                              const dx = coords.x - cx;
-                              const dy = coords.y - cy;
-                              const d2 = dx * dx + dy * dy;
-                              if (d2 < R_SQUARED) {
-                                overlaps.push({ dist: d2, id: node.id });
-                              }
-                            });
-
-                            if (overlaps.length) {
-                              for (let i = 1; i < overlaps.length; i++) {
-                                if (overlaps[i].dist < overlaps[0].dist) {
-                                  overlaps[0].dist = overlaps[i].dist;
-                                  overlaps[0].id = overlaps[i].id;
-                                }
-                              }
-                              let newId = overlaps[0].id;
-                              if (fromId === newId) return;
-                              fromId = newId;
-                              setGhostHead(fromId);
-                              setNodes(props.id, "inputs", key, "from", fromId);
-                            } else {
-                              if (fromId == null) return;
-                              fromId = null;
-                              setGhostHead(null);
-                              setNodes(props.id, "inputs", key, "from", null);
+                            const dx = coords.x - cx;
+                            const dy = coords.y - cy;
+                            const d2 = dx * dx + dy * dy;
+                            if (d2 < R_SQUARED) {
+                              overlaps.push({ dist: d2, id: node.id });
                             }
-                          };
-                          const onReleaseHead = () => {
-                            document.removeEventListener(
-                              "pointermove",
-                              onMoveHead
-                            );
-                            document.removeEventListener(
-                              "pointerup",
-                              onReleaseHead
-                            );
-                            batch(() => {
-                              setGhostHead(null);
-                              setGhostTail(null);
-                            });
-                          };
+                          });
 
-                          document.addEventListener("pointermove", onMoveHead);
-                          document.addEventListener("pointerup", onReleaseHead);
-                        }
-                      }}
-                    >
-                      <circle cx="50%" cy="50%" r="30%" />
-                      <Show when={input.from != null}>
-                        <path d="" />
-                      </Show>
-                    </svg>
-                  </div>
-                  {/* <div class="absolute z-30 rounded-full -left-1.5 w-3 h-3 bg-red"></div> */}
+                          if (overlaps.length) {
+                            for (let i = 1; i < overlaps.length; i++) {
+                              if (overlaps[i].dist < overlaps[0].dist) {
+                                overlaps[0].dist = overlaps[i].dist;
+                                overlaps[0].id = overlaps[i].id;
+                              }
+                            }
+                            let newId = overlaps[0].id;
+                            if (fromId === newId) return;
+                            fromId = newId;
+                            setGhostHead(fromId);
+                            setNodes(props.id, "inputs", key, "from", fromId);
+                          } else {
+                            if (fromId == null) return;
+                            fromId = null;
+                            setGhostHead(null);
+                            setNodes(props.id, "inputs", key, "from", null);
+                          }
+                        };
+                        const onReleaseHead = () => {
+                          document.removeEventListener(
+                            "pointermove",
+                            onMoveHead
+                          );
+                          document.removeEventListener(
+                            "pointerup",
+                            onReleaseHead
+                          );
+                          batch(() => {
+                            setGhostHead(null);
+                            setGhostTail(null);
+                          });
+                        };
+
+                        document.addEventListener("pointermove", onMoveHead);
+                        document.addEventListener("pointerup", onReleaseHead);
+                      }
+                    }}
+                  ></div>
                   <ResizingTextInput
-                    defaultValue=""
+                    defaultValue={
+                      input.from != null
+                        ? nodes[input.from!]!.output.value
+                        : input.value
+                    }
+                    disabled={input.from != null}
                     placeholder="Enter text..."
-                    onInput={() => {
-                      const scale = canvasScale();
-                      const rect = nodeRef.getBoundingClientRect();
-                      setNodes(props.id, {
-                        width: rect.width / scale,
-                        height: rect.height / scale,
-                      });
+                    onInput={(e) => {
+                      updateNodePos();
+                      setNodes(
+                        props.id,
+                        "inputs",
+                        key,
+                        "value",
+                        e.currentTarget.value
+                      );
                     }}
                   />
                 </div>
@@ -288,7 +304,7 @@ export function Node(props: NodeProps) {
           }}
         </For>
         <div>
-          <div class="select-none">{props.output.label}</div>
+          <div class="select-none text-sm">{props.output.label}</div>
           <div class="flex items-center">
             <div
               ref={outputHandleRef!}
@@ -302,7 +318,7 @@ export function Node(props: NodeProps) {
                 onPointerDownTail(props.id, null);
               }}
             ></div>
-            <TextInput defaultValue={props.output.value} />
+            <TextInput defaultValue={outputValue()} disabled />
           </div>
         </div>
       </div>
