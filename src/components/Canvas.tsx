@@ -1,6 +1,7 @@
 import {
   createContext,
   createSignal,
+  For,
   Index,
   Show,
   useContext,
@@ -9,7 +10,13 @@ import {
 } from "solid-js";
 import { useNodesContext } from "./context/NodesContext";
 import { Node } from "./Node";
-import { fuqrNode, textNode } from "./nodes/factory";
+import { fuqrNode, NODE_MAP, textNode } from "./nodes/factory";
+import { toDom } from "hast-util-to-dom";
+
+export type Coords = {
+  x: number;
+  y: number;
+};
 
 export const CanvasContext = createContext<{
   canvasScale: Accessor<number>;
@@ -56,7 +63,7 @@ export function useCanvasContext() {
   return context;
 }
 
-export function Canvas() {
+export function Canvas(props) {
   const [dragging, setDragging] = createSignal(false);
   const [panning, setPanning] = createSignal(false);
   const [canvasOffset, setCanvasOffset] = createSignal({ x: 0, y: 0 });
@@ -154,7 +161,7 @@ export function Canvas() {
 
   /////////////////////
 
-  const { nodes, addNode, setNodes, activeIds, setActiveIds } =
+  const { nodes, addNode, removeNode, setNodes, activeIds, setActiveIds } =
     useNodesContext();
 
   let selectStartX;
@@ -329,13 +336,29 @@ export function Canvas() {
   const [ghostHead, setGhostHead] = createSignal<number | null>(null);
   const [ghostTail, setGhostTail] = createSignal<[number, string] | null>(null);
 
-  // const [activeHandle, setActiveHandle] = createSignal<
-  //   (string | number)[] | null
-  // >(null);
   const [handleCoords, setHandleCoords] = createSignal<{
     x: number;
     y: number;
   } | null>(null);
+
+  let toolbox: HTMLDivElement;
+
+  const [babyPos, setBabyPos] = createSignal<Coords | null>(null);
+  const [overToolbox, setOverToolbox] = createSignal(false);
+  let babyText;
+  let babyOffsetX;
+  let babyOffsetY;
+
+  document.addEventListener("keydown", (e) => {
+    switch (e.key) {
+      case "Delete":
+      case "Backspace": {
+        activeIds().forEach((id) => removeNode(id));
+        setActiveIds([]);
+        setActiveBox(null);
+      }
+    }
+  });
 
   return (
     <div
@@ -423,23 +446,99 @@ export function Canvas() {
           }
         }
       }}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        const coords = toCanvasCoords(e.clientX, e.clientY);
-        const id = addNode(
-          fuqrNode({
-            x: coords.x - 100,
-            y: coords.y - 100,
-          })
-          // textNode({
-          //   x: coords.x - 100,
-          //   y: coords.y - 100,
-          // })
-        );
-        setActiveIds([id]);
-        setActiveBox(null);
+      onKeyDown={(e) => {
+        // ignore events on inputs from reaching document listener
+        e.stopImmediatePropagation();
       }}
     >
+      <div
+        ref={toolbox!}
+        class="absolute bg-back-subtle border text-white flex flex-col gap-1 p-2 m-2 z-50"
+        onPointerDown={(e) => {
+          e.stopImmediatePropagation();
+        }}
+      >
+        <div class="select-none leading-none font-bold pb-2">Toolbox</div>
+        <For each={["Text", "QR Code", "Renderer"]}>
+          {(val) => {
+            return (
+              <div
+                class="p-4 border"
+                onPointerDown={(e) => {
+                  babyOffsetX = e.offsetX;
+                  babyOffsetY = e.offsetY;
+
+                  const onMove = (e) => {
+                    setBabyPos({
+                      x: e.clientX - babyOffsetX,
+                      y: e.clientY - babyOffsetY,
+                    });
+                    setOverToolbox(toolbox.contains(e.target));
+                  };
+                  const onRelease = (e) => {
+                    document.removeEventListener("pointermove", onMove);
+                    document.removeEventListener("pointerup", onRelease);
+
+                    const rect = parentDiv.getBoundingClientRect();
+                    if (
+                      rect.left < e.clientX &&
+                      e.clientX < rect.right &&
+                      rect.top < e.clientY &&
+                      e.clientY < rect.bottom &&
+                      !toolbox.contains(e.target)
+                    ) {
+                      const { x, y } = toCanvasCoords(e.clientX, e.clientY);
+                      console.log("success drop", e.target);
+
+                      console.log(props.preview);
+                      const node = NODE_MAP[val]({
+                        x: x - babyOffsetX,
+                        y: y - babyOffsetY,
+                      });
+                      if (val === "Renderer") {
+                        const now = node.function;
+                        node.function = function (...args) {
+                          const result = now(...args);
+                          if (result == null) return;
+                          props.preview.replaceChildren(toDom(result));
+                          return result;
+                        };
+                      }
+                      const id = addNode(node);
+                      setActiveIds([id]);
+                    }
+                    setBabyPos(null);
+                  };
+
+                  babyText = val;
+                  document.addEventListener("pointermove", onMove);
+                  document.addEventListener("pointerup", onRelease);
+                }}
+              >
+                <div class="select-none pointer-events-none leading-none font-bold w-48">
+                  {val}
+                </div>
+              </div>
+            );
+          }}
+        </For>
+        <Show when={babyPos()}>
+          {(pos) => (
+            <div
+              class="fixed top-0 left-0 p-4 border transition-scale"
+              style={{
+                translate: `${pos().x}px ${pos().y}px`,
+                scale: overToolbox() ? 1 : canvasScale(),
+                "transform-origin": `${babyOffsetX}px ${babyOffsetY}px`,
+              }}
+            >
+              <div class="select-none pointer-events-none leading-none font-bold w-48">
+                {babyText}
+              </div>
+            </div>
+          )}
+        </Show>
+      </div>
       <CanvasContext.Provider
         value={{
           canvasScale,
@@ -457,51 +556,63 @@ export function Canvas() {
           }}
         >
           <Index each={nodes}>
-            {(node) => {
-              const curr = node();
-              if (curr == null) return;
+            {(node, i) => {
+              console.log("index", i);
               return (
-                <Index each={Object.entries(curr.inputs)}>
-                  {(entry) => {
-                    const [_, input] = entry();
+                <Show when={node()}>
+                  {(currr) => {
+                    const curr = currr();
                     return (
-                      <Show when={input.from != null}>
-                        {(_) => {
-                          const headId = input.from!;
-                          const start = nodes[headId]!;
-                          const d = () => {
-                            const startX =
-                              start.x + start.output.cx + BEZIER_HANDLE;
-                            const startY = start.y + start.output.cy;
-                            const endX = curr.x + input.cx + -BEZIER_HANDLE;
-                            const endY = curr.y + input.cy;
-                            return connectPath(startX, startY, endX, endY);
-                          };
+                      <Index each={Object.entries(curr.inputs)}>
+                        {(entry) => {
+                          const [_, input] = entry();
                           return (
-                            <svg class="absolute overflow-visible pointer-events-none">
-                              <path
-                                fill="none"
-                                stroke="rgb(137 137 137)"
-                                stroke-width={4}
-                                stroke-dasharray="8 12"
-                                stroke-linecap="round"
-                                d={d()}
-                              >
-                                <animate
-                                  attributeName="stroke-dashoffset"
-                                  from="0"
-                                  to="20"
-                                  dur="800ms"
-                                  repeatCount="indefinite"
-                                />
-                              </path>
-                            </svg>
+                            <Show when={input.from != null}>
+                              {(_) => {
+                                const headId = input.from!;
+                                const start = nodes[headId]!;
+                                const d = () => {
+                                  const startX =
+                                    start.x + start.output.cx + BEZIER_HANDLE;
+                                  const startY = start.y + start.output.cy;
+                                  const endX =
+                                    curr.x + input.cx + -BEZIER_HANDLE;
+                                  const endY = curr.y + input.cy;
+                                  return connectPath(
+                                    startX,
+                                    startY,
+                                    endX,
+                                    endY
+                                  );
+                                };
+                                return (
+                                  <svg class="absolute overflow-visible pointer-events-none">
+                                    <path
+                                      fill="none"
+                                      stroke="rgb(137 137 137)"
+                                      stroke-width={4}
+                                      stroke-dasharray="8 12"
+                                      stroke-linecap="round"
+                                      d={d()}
+                                    >
+                                      <animate
+                                        attributeName="stroke-dashoffset"
+                                        from="0"
+                                        to="20"
+                                        dur="800ms"
+                                        repeatCount="indefinite"
+                                      />
+                                    </path>
+                                  </svg>
+                                );
+                              }}
+                            </Show>
                           );
                         }}
-                      </Show>
+                      </Index>
                     );
                   }}
-                </Index>
+                </Show>
               );
             }}
           </Index>
@@ -545,9 +656,10 @@ export function Canvas() {
           </Show>
           <Index each={nodes}>
             {(node) => {
-              const props = node();
-              if (props == null) return;
-              return <Node {...props} />;
+              // const props = node();
+              return (
+                <Show when={node()}>{(props) => <Node {...props()} />}</Show>
+              );
             }}
           </Index>
           <svg class="absolute overflow-visible pointer-events-none">

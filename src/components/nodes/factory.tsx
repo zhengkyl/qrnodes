@@ -54,8 +54,8 @@ export function renderNode({ x, y }) {
     inputs: {
       qrCode: {
         type: "fuqr",
-        label: "Text",
-        value: "",
+        label: "QR Code",
+        value: null,
       },
     },
     output: {
@@ -63,14 +63,15 @@ export function renderNode({ x, y }) {
       label: "HTML AST",
     },
     function: (inputs) => {
+      if (inputs.qrCode == null) return;
       const width = inputs.qrCode.version * 4 + 17;
 
       const margin = 2;
-      let path = "";
+      let d = "";
       for (let y = 0; y < width; y++) {
         for (let x = 0; x < width; x++) {
           if (inputs.qrCode.matrix[y * width + x] & 1) {
-            path += `M${x + margin},${y + margin}h1v1h-1z`;
+            d += `M${x + margin},${y + margin}h1v1h-1z`;
           }
         }
       }
@@ -81,8 +82,20 @@ export function renderNode({ x, y }) {
           xmlns: "http://www.w3.org/2000/svg",
           viewbox: `0 0 ${fullWidth} ${fullWidth}`,
         },
-        [s("path", { path })]
+        [
+          s("path", {
+            d: `M0,0h${fullWidth}v${fullWidth}h-${fullWidth}z`,
+            fill: "white",
+          }),
+          s("path", { d, fill: "black" }),
+        ]
       );
     },
   });
 }
+
+export const NODE_MAP = {
+  Text: textNode,
+  "QR Code": fuqrNode,
+  Renderer: renderNode,
+};

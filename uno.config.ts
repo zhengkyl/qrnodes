@@ -15,5 +15,8 @@ export default defineConfig({
         distinct: "#3d3e3e",
       },
     },
+    transitionProperty: {
+      scale: "scale",
+    },
   },
 });

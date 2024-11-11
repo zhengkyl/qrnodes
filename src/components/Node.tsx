@@ -72,7 +72,7 @@ export function Node(props: NodeProps) {
 
       entries.forEach(([key, input]) => {
         if (input.from != null) return;
-        if (input.type !== node.output.type) return;
+        if (input.type !== props.output.type) return;
         validNodes.push({
           cx: node.x + input.cx,
           cy: node.y + input.cy,
