@@ -24,6 +24,7 @@ export const CanvasContext = createContext<{
   setHandleCoords: Setter<{ x: number; y: number } | null>;
   setGhostHead: Setter<number | null>;
   setGhostTail: Setter<[number, string] | null>;
+  preview: Accessor<HTMLDivElement>;
   // setCanvasScale: Setter<number>;
   // canvasOffset: Accessor<{ x: number; y: number }>;
   // // onPanMove: () => void;
@@ -280,10 +281,6 @@ export function Canvas(props) {
   const getIdsAtPoint = (x, y) => {
     const wiggle = 10 / canvasScale();
 
-    // if (active != null) {
-    //   if (x <= active.x + active.width) return activeIds();
-    // }
-
     const candidates: { ids: number[]; dist: number }[] = [];
 
     const selectables = nodes
@@ -410,9 +407,14 @@ export function Canvas(props) {
         if (e.ctrlKey || e.metaKey) {
           e.preventDefault();
           const oldScale = canvasScale();
+          let deltaY = e.deltaY;
+          const sign = Math.sign(deltaY);
+          if (sign * deltaY > 10) {
+            deltaY = sign * 10;
+          }
           const newScale = Math.max(
             MIN_SCALE,
-            Math.min(oldScale * (1 - e.deltaY / 1000), MAX_SCALE)
+            Math.min(oldScale * (1 - deltaY / 100), MAX_SCALE)
           );
           if (newScale === oldScale) return;
 
@@ -429,7 +431,7 @@ export function Canvas(props) {
           let dx = e.deltaX;
           let dy = e.deltaY;
           if (e.shiftKey) {
-            dx = dy;
+            dx = dy || dx; // apple gives dx automatically?
             dy = 0;
           }
           setCanvasOffset((prev) => ({
@@ -447,7 +449,7 @@ export function Canvas(props) {
         }
       }}
       onKeyDown={(e) => {
-        // ignore events on inputs from reaching document listener
+        // stop events on inputs from reaching document listener
         e.stopImmediatePropagation();
       }}
     >
@@ -459,7 +461,7 @@ export function Canvas(props) {
         }}
       >
         <div class="select-none leading-none font-bold pb-2">Toolbox</div>
-        <For each={["Text", "QR Code", "Renderer"]}>
+        <For each={["Text", "QR Code", "Renderer", "Display"]}>
           {(val) => {
             return (
               <div
@@ -490,20 +492,10 @@ export function Canvas(props) {
                       const { x, y } = toCanvasCoords(e.clientX, e.clientY);
                       console.log("success drop", e.target);
 
-                      console.log(props.preview);
                       const node = NODE_MAP[val]({
                         x: x - babyOffsetX,
                         y: y - babyOffsetY,
                       });
-                      if (val === "Renderer") {
-                        const now = node.function;
-                        node.function = function (...args) {
-                          const result = now(...args);
-                          if (result == null) return;
-                          props.preview.replaceChildren(toDom(result));
-                          return result;
-                        };
-                      }
                       const id = addNode(node);
                       setActiveIds([id]);
                     }
@@ -541,6 +533,7 @@ export function Canvas(props) {
       </div>
       <CanvasContext.Provider
         value={{
+          preview: props.preview,
           canvasScale,
           toCanvasCoords,
           setHandleCoords,
@@ -656,7 +649,6 @@ export function Canvas(props) {
           </Show>
           <Index each={nodes}>
             {(node) => {
-              // const props = node();
               return (
                 <Show when={node()}>{(props) => <Node {...props()} />}</Show>
               );

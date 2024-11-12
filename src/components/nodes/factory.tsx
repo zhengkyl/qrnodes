@@ -7,19 +7,33 @@ export function textNode({ x, y }) {
     x,
     y,
     title: "Text",
-    inputs: {
-      text: {
-        type: "string",
-        label: "Text",
-        value: "",
-      },
-    },
+    inputs: {},
     output: {
       type: "string",
       label: "Output",
     },
+    function: () => {},
+  });
+}
+
+export function displayNode({ x, y }) {
+  return baseToNode({
+    x,
+    y,
+    title: "Display",
+    inputs: {
+      hast: {
+        type: "hast",
+        label: "HTML AST",
+        value: null,
+      },
+    },
+    output: {
+      type: "display",
+      label: "Output",
+    },
     function: (inputs) => {
-      return inputs.text;
+      return inputs.hast;
     },
   });
 }
@@ -98,4 +112,5 @@ export const NODE_MAP = {
   Text: textNode,
   "QR Code": fuqrNode,
   Renderer: renderNode,
+  Display: displayNode,
 };

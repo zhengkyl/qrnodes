@@ -1,7 +1,8 @@
 import { ResizingTextInput, TextInput } from "./ui/Input";
 import { useNodesContext, type NodeCommon } from "./context/NodesContext";
-import { batch, For, onMount } from "solid-js";
+import { batch, For, onMount, Show } from "solid-js";
 import { useCanvasContext } from "./Canvas";
+import { toDom } from "hast-util-to-dom";
 
 type NodeProps = NodeCommon;
 
@@ -14,6 +15,7 @@ export function Node(props: NodeProps) {
     setHandleCoords,
     setGhostHead,
     setGhostTail,
+    preview,
   } = useCanvasContext();
   const { nodes, setNodes, activeIds } = useNodesContext();
 
@@ -37,6 +39,7 @@ export function Node(props: NodeProps) {
       });
     });
 
+    if (outputHandleRef == null) return;
     const handle = outputHandleRef.getBoundingClientRect();
     const { x, y } = toCanvasCoords(
       handle.x + handle.width / 2,
@@ -156,6 +159,12 @@ export function Node(props: NodeProps) {
     });
     const output = props.function(inputs);
     setNodes(props.id, "output", "value", output);
+
+    if (props.output.type === "display") {
+      console.log("display");
+      if (output == null) return;
+      preview().replaceChildren(toDom(output));
+    }
     // console.log("calc outputValue", props.id, inputs, output);
     return output;
   };
@@ -306,19 +315,38 @@ export function Node(props: NodeProps) {
         <div>
           <div class="select-none text-sm">{props.output.label}</div>
           <div class="flex items-center">
-            <div
-              ref={outputHandleRef!}
-              class="absolute -right-2 w-4 h-4 border bg-back-subtle"
-              onPointerDown={(e) => {
-                e.stopImmediatePropagation();
-                const coords = toCanvasCoords(e.clientX, e.clientY);
-                setHandleCoords(coords);
+            <Show when={props.output.type !== "display"}>
+              <div
+                ref={outputHandleRef!}
+                class="absolute -right-2 w-4 h-4 border bg-back-subtle"
+                onPointerDown={(e) => {
+                  e.stopImmediatePropagation();
+                  const coords = toCanvasCoords(e.clientX, e.clientY);
+                  setHandleCoords(coords);
 
-                setGhostHead(props.id);
-                onPointerDownTail(props.id, null);
-              }}
-            ></div>
-            <TextInput defaultValue={outputValue()} disabled />
+                  setGhostHead(props.id);
+                  onPointerDownTail(props.id, null);
+                }}
+              ></div>
+            </Show>
+            <Show
+              when={Object.keys(props.inputs).length === 0}
+              // TODO impl all output types instead of just text
+              fallback={<TextInput defaultValue={outputValue()} disabled />}
+            >
+              <ResizingTextInput
+                defaultValue={(() => {
+                  // TODO gross
+                  setNodes(props.id, "output", "value", "");
+                  return "";
+                })()}
+                placeholder="Enter text..."
+                onInput={(e) => {
+                  updateNodePos();
+                  setNodes(props.id, "output", "value", e.currentTarget.value);
+                }}
+              />
+            </Show>
           </div>
         </div>
       </div>

@@ -32,14 +32,15 @@ export function Panels() {
     setTopPercent((clamped / pixelWidth) * 100);
   };
 
-  let preview;
+  const [preview, setPreview] = createSignal(null);
+
   return (
     <div ref={flexParent!} class="w-full h-full flex relative">
       <div
         class="min-w-100px bg-back-base"
         style={{ width: `calc(${leftPercent()}% - 0.5px)` }}
       >
-        <Canvas preview={(() => preview)()} />
+        <Canvas preview={preview} />
       </div>
       <div
         class="w-px cursor-ew-resize relative bg-stone-300 select-none after:(content-[''] block w-2 -left-1 h-full absolute z-10)"
@@ -61,7 +62,7 @@ export function Panels() {
             "background-position": "center",
           }}
         >
-          <Preview ref={preview} />
+          <Preview ref={setPreview} />
         </div>
         <div
           class="h-px cursor-ns-resize relative bg-stone-300 select-none after:(content-[''] block h-2 -top-1 w-full absolute z-10)"
