@@ -1,6 +1,7 @@
 import { createSignal } from "solid-js";
 import { Canvas } from "./Canvas";
 import { Preview } from "./Preview";
+import { Details } from "./Details";
 
 export function Panels() {
   const [leftPercent, setLeftPercent] = createSignal(90);
@@ -35,7 +36,7 @@ export function Panels() {
   const [preview, setPreview] = createSignal(null);
 
   return (
-    <div ref={flexParent!} class="w-full h-full flex relative">
+    <div ref={flexParent!} class="h-full min-h-0 flex relative">
       <div
         class="min-w-100px bg-back-base"
         style={{ width: `calc(${leftPercent()}% - 0.5px)` }}
@@ -54,12 +55,9 @@ export function Panels() {
         style={{ width: `calc(${100 - leftPercent()}% - 0.5px)` }}
       >
         <div
-          class="min-h-100px"
+          class="min-h-100px checkerboard"
           style={{
             height: `calc(${topPercent()}% - 0.5px)`,
-            background: `repeating-conic-gradient(#ddd 0% 25%, #aaa 25% 50%)`,
-            "background-size": "4rem 4rem",
-            "background-position": "center",
           }}
         >
           <Preview ref={setPreview} />
@@ -72,9 +70,11 @@ export function Panels() {
           }}
         ></div>
         <div
-          class="min-h-100px bg-blue"
+          class="min-h-100px"
           style={{ height: `calc(${100 - topPercent()}% - 0.5px)` }}
-        ></div>
+        >
+          <Details />
+        </div>
       </div>
     </div>
   );

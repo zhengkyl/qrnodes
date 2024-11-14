@@ -1,6 +1,14 @@
 import { ResizingTextInput, TextInput } from "./ui/Input";
 import { useNodesContext, type NodeCommon } from "./context/NodesContext";
-import { batch, For, onMount, Show } from "solid-js";
+import {
+  batch,
+  createEffect,
+  For,
+  Match,
+  onMount,
+  Show,
+  Switch,
+} from "solid-js";
 import { useCanvasContext } from "./Canvas";
 import { toDom } from "hast-util-to-dom";
 
@@ -75,7 +83,7 @@ export function Node(props: NodeProps) {
 
       entries.forEach(([key, input]) => {
         if (input.from != null) return;
-        if (input.type !== props.output.type) return;
+        if (input.type !== nodes[fromId]!.output.type) return;
         validNodes.push({
           cx: node.x + input.cx,
           cy: node.y + input.cy,
@@ -86,7 +94,6 @@ export function Node(props: NodeProps) {
     const onMoveTail = (e: PointerEvent) => {
       const coords = toCanvasCoords(e.clientX, e.clientY);
       setHandleCoords(coords);
-
       const overlaps: {
         dist: number;
         path: [number, string];
@@ -330,26 +337,54 @@ export function Node(props: NodeProps) {
               ></div>
             </Show>
             <Show
-              when={Object.keys(props.inputs).length === 0}
-              // TODO impl all output types instead of just text
-              fallback={<TextInput defaultValue={outputValue()} disabled />}
+              when={Object.keys(props.inputs).length}
+              fallback={
+                <Switch>
+                  <Match when={props.output.type === "string"}>
+                    <ResizingTextInput
+                      defaultValue={(() => {
+                        // TODO gross
+                        setNodes(props.id, "output", "value", "");
+                        return "";
+                      })()}
+                      placeholder="Enter text..."
+                      onInput={(e) => {
+                        updateNodePos();
+                        setNodes(
+                          props.id,
+                          "output",
+                          "value",
+                          e.currentTarget.value
+                        );
+                      }}
+                    />
+                  </Match>
+                </Switch>
+              }
             >
-              <ResizingTextInput
-                defaultValue={(() => {
-                  // TODO gross
-                  setNodes(props.id, "output", "value", "");
-                  return "";
-                })()}
-                placeholder="Enter text..."
-                onInput={(e) => {
-                  updateNodePos();
-                  setNodes(props.id, "output", "value", e.currentTarget.value);
-                }}
-              />
+              <Switch
+                fallback={<TextInput defaultValue={outputValue()} disabled />}
+              >
+                <Match when={props.output.type === "display"}>
+                  <DisplayOutput output={outputValue()} />
+                </Match>
+              </Switch>
             </Show>
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+function DisplayOutput(props) {
+  let ref: HTMLDivElement;
+  createEffect(() => {
+    if (props.output == null) {
+      ref.replaceChildren();
+    } else {
+      ref.replaceChildren(toDom(props.output));
+    }
+  });
+  return <div ref={ref!} class="h-full w-full aspect-1/1 checkerboard"></div>;
 }
