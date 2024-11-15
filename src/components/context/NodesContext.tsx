@@ -61,13 +61,14 @@ export function baseToNode<T extends InputsBase>(
   base: NodeBase<T>
 ): NodeCommon {
   const node = base as unknown as NodeCommon;
-  Object.values(node.inputs).forEach((input) => {
+
+  const values = Object.values(node.inputs);
+  values.forEach((input) => {
     input.from = null;
     input.cx = 0;
     input.cy = 0;
   });
-
-  node.output.value = null;
+  node.output.value = values.length ? null : node.function({});
   node.output.cx = 0;
   node.output.cy = 0;
 
@@ -92,6 +93,9 @@ type NodeBase<T extends InputsBase> = {
   output: {
     type: string;
     label: string;
+    props?: {
+      [key: string]: any;
+    };
   };
   function: (inputs: { [K in keyof T]: any }) => Promise<any> | any;
 };
@@ -111,7 +115,9 @@ export type NodeCommon = {
       from: null | number;
       cx: number; // relative to node
       cy: number; // relative to node
-      // [key: string]: any;
+      props?: {
+        [key: string]: any;
+      };
     };
   };
   output: {
@@ -120,7 +126,9 @@ export type NodeCommon = {
     value: any; // depends on type
     cx: number; // relative to node
     cy: number; // relative to node
-    // ids: number[]
+    props?: {
+      [key: string]: any;
+    };
   };
   /// should match inputs and output, prob not possible to type
   function: (inputs: any) => any;

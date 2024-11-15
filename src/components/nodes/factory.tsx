@@ -1,5 +1,5 @@
 import { baseToNode } from "../context/NodesContext";
-import { generate, QrOptions } from "fuqr";
+import { generate, QrOptions, Version } from "fuqr";
 import { s } from "hastscript";
 
 export function textNode({ x, y }) {
@@ -11,8 +11,29 @@ export function textNode({ x, y }) {
     output: {
       type: "string",
       label: "Output",
+      props: {
+        placeholder: "Enter text...",
+      },
     },
-    function: () => {},
+    function: () => {
+      return "";
+    },
+  });
+}
+
+export function numberNode({ x, y }) {
+  return baseToNode({
+    x,
+    y,
+    title: "Number",
+    inputs: {},
+    output: {
+      type: "number",
+      label: "Output",
+    },
+    function: () => {
+      return 0;
+    },
   });
 }
 
@@ -48,6 +69,42 @@ export function fuqrNode({ x, y }) {
         type: "string",
         label: "Text",
         value: "",
+        props: {
+          placeholder: "Enter text...",
+        },
+      },
+      mode: {
+        type: "select",
+        label: "Encoding",
+        value: "Auto",
+        props: {
+          options: ["Auto", "Numeric", "Alphanumeric", "Byte"],
+        },
+      },
+      minVersion: {
+        type: "number",
+        label: "Min version",
+        value: 1,
+        props: {
+          min: 1,
+          max: 4,
+        },
+      },
+      minEcl: {
+        type: "select",
+        label: "Min ECL",
+        value: "Low",
+        props: {
+          options: ["Low", "Medium", "Quartile", "High"],
+        },
+      },
+      mask: {
+        type: "select",
+        label: "Mask",
+        value: "Auto",
+        props: {
+          options: ["Auto", 0, 1, 2, 3, 4, 5, 6, 7],
+        },
       },
     },
     output: {
@@ -55,7 +112,10 @@ export function fuqrNode({ x, y }) {
       label: "QR Code",
     },
     function: (inputs) => {
-      return generate(inputs.text, new QrOptions());
+      return generate(
+        inputs.text,
+        new QrOptions().min_version(new Version(inputs.minVersion))
+      );
     },
   });
 }
@@ -110,6 +170,7 @@ export function renderNode({ x, y }) {
 
 export const NODE_MAP = {
   Text: textNode,
+  Number: numberNode,
   "QR Code": fuqrNode,
   Renderer: renderNode,
   Display: displayNode,

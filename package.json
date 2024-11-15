@@ -9,10 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@kobalte/core": "^0.13.7",
     "@unocss/reset": "^0.63.6",
     "fuqr": "^1.0.0",
     "hast-util-to-dom": "^4.0.0",
     "hastscript": "^9.0.0",
+    "lucide-solid": "^0.456.0",
     "solid-js": "^1.9.2"
   },
   "devDependencies": {

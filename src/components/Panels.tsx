@@ -4,7 +4,7 @@ import { Preview } from "./Preview";
 import { Details } from "./Details";
 
 export function Panels() {
-  const [leftPercent, setLeftPercent] = createSignal(90);
+  const [leftPercent, setLeftPercent] = createSignal(75);
   const [topPercent, setTopPercent] = createSignal(50);
 
   let flexParent: HTMLDivElement;
@@ -38,7 +38,7 @@ export function Panels() {
   return (
     <div ref={flexParent!} class="h-full min-h-0 flex relative">
       <div
-        class="min-w-100px bg-back-base"
+        class="min-w-100px bg-back-base text-white"
         style={{ width: `calc(${leftPercent()}% - 0.5px)` }}
       >
         <Canvas preview={preview} />

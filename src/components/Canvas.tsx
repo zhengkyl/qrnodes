@@ -10,8 +10,8 @@ import {
 } from "solid-js";
 import { useNodesContext } from "./context/NodesContext";
 import { Node } from "./Node";
-import { fuqrNode, NODE_MAP, textNode } from "./nodes/factory";
-import { toDom } from "hast-util-to-dom";
+import { NODE_MAP } from "./nodes/factory";
+import { containsPoint } from "../util/rect";
 
 export type Coords = {
   x: number;
@@ -300,7 +300,7 @@ export function Canvas(props) {
       });
     }
 
-    // nodes is already in z index order
+    // TODO nodes is NOT in z index order
     search: for (let i = selectables.length - 1; i >= 0; i--) {
       const node = selectables[i];
       const leftD = node.x - x;
@@ -350,9 +350,10 @@ export function Canvas(props) {
     switch (e.key) {
       case "Delete":
       case "Backspace": {
-        activeIds().forEach((id) => removeNode(id));
+        const prevActive = activeIds();
         setActiveIds([]);
         setActiveBox(null);
+        prevActive.forEach((id) => removeNode(id));
       }
     }
   });
@@ -380,8 +381,7 @@ export function Canvas(props) {
               setActiveIds(ids);
               setActiveBox(null);
             }
-
-            if (e.target.tagName !== "INPUT") {
+            if (e.target.tagName !== "INPUT" && e.target.tagName !== "BUTTON") {
               prevClientX = e.clientX;
               prevClientY = e.clientY;
               setDragging(true);
@@ -455,13 +455,13 @@ export function Canvas(props) {
     >
       <div
         ref={toolbox!}
-        class="absolute bg-back-subtle border text-white flex flex-col gap-1 p-2 m-2 z-50"
+        class="absolute bg-back-subtle border flex flex-col gap-1 p-2 m-2 z-50"
         onPointerDown={(e) => {
           e.stopImmediatePropagation();
         }}
       >
         <div class="select-none leading-none font-bold pb-2">Toolbox</div>
-        <For each={["Text", "QR Code", "Renderer", "Display"]}>
+        <For each={Object.keys(NODE_MAP)}>
           {(val) => {
             return (
               <div
@@ -482,15 +482,12 @@ export function Canvas(props) {
                     document.removeEventListener("pointerup", onRelease);
 
                     const rect = parentDiv.getBoundingClientRect();
+                    const toolRect = toolbox.getBoundingClientRect();
                     if (
-                      rect.left < e.clientX &&
-                      e.clientX < rect.right &&
-                      rect.top < e.clientY &&
-                      e.clientY < rect.bottom &&
-                      !toolbox.contains(e.target)
+                      containsPoint(rect, e.clientX, e.clientY) &&
+                      !containsPoint(toolRect, e.clientX, e.clientY)
                     ) {
                       const { x, y } = toCanvasCoords(e.clientX, e.clientY);
-                      console.log("success drop", e.target);
 
                       const node = NODE_MAP[val]({
                         x: x - babyOffsetX,

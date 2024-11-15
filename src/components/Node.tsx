@@ -1,5 +1,4 @@
-import { ResizingTextInput, TextInput } from "./ui/Input";
-import { useNodesContext, type NodeCommon } from "./context/NodesContext";
+import { toDom } from "hast-util-to-dom";
 import {
   batch,
   createEffect,
@@ -9,8 +8,12 @@ import {
   Show,
   Switch,
 } from "solid-js";
+import { Dynamic } from "solid-js/web";
 import { useCanvasContext } from "./Canvas";
-import { toDom } from "hast-util-to-dom";
+import { useNodesContext, type NodeCommon } from "./context/NodesContext";
+import { NumberInput } from "./ui/NumberInput";
+import { ResizingTextInput, TextInput } from "./ui/TextInput";
+import { Select } from "./ui/Select";
 
 type NodeProps = NodeCommon;
 
@@ -27,39 +30,41 @@ export function Node(props: NodeProps) {
   } = useCanvasContext();
   const { nodes, setNodes, activeIds } = useNodesContext();
 
-  const updateNodePos = () => {
-    const scale = canvasScale();
-    const rect = nodeRef.getBoundingClientRect();
-    setNodes(props.id, {
-      width: rect.width / scale,
-      height: rect.height / scale,
+  onMount(() => {
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const width = entry.borderBoxSize[0].inlineSize;
+        const height = entry.borderBoxSize[0].blockSize;
+
+        setNodes(props.id, { width, height });
+
+        Object.keys(props.inputs).forEach((key, i) => {
+          const handle = inputHandleRefs[i].getBoundingClientRect();
+          const { x, y } = toCanvasCoords(
+            handle.x + handle.width / 2,
+            handle.y + handle.height / 2
+          );
+          setNodes(props.id, "inputs", key, {
+            cx: x - props.x,
+            cy: y - props.y,
+          });
+        });
+
+        if (outputHandleRef == null) return;
+        const handle = outputHandleRef.getBoundingClientRect();
+        const { x, y } = toCanvasCoords(
+          handle.x + handle.width / 2,
+          handle.y + handle.height / 2
+        );
+        setNodes(props.id, "output", {
+          cx: x - props.x,
+          cy: y - props.y,
+        });
+      }
     });
 
-    Object.keys(props.inputs).forEach((key, i) => {
-      const handle = inputHandleRefs[i].getBoundingClientRect();
-      const { x, y } = toCanvasCoords(
-        handle.x + handle.width / 2,
-        handle.y + handle.height / 2
-      );
-      setNodes(props.id, "inputs", key, {
-        cx: x - props.x,
-        cy: y - props.y,
-      });
-    });
-
-    if (outputHandleRef == null) return;
-    const handle = outputHandleRef.getBoundingClientRect();
-    const { x, y } = toCanvasCoords(
-      handle.x + handle.width / 2,
-      handle.y + handle.height / 2
-    );
-    setNodes(props.id, "output", {
-      cx: x - props.x,
-      cy: y - props.y,
-    });
-  };
-
-  onMount(updateNodePos);
+    observer.observe(nodeRef);
+  });
 
   let nodeRef: HTMLDivElement;
   const inputHandleRefs: HTMLDivElement[] = [];
@@ -67,9 +72,8 @@ export function Node(props: NodeProps) {
 
   const onPointerDownTail = (
     fromId: number,
-    ignorePath: [number, string] | null
+    oldToPath: [number, string] | null
   ) => {
-    let toPath: [number, string] | null = null;
     const validNodes: {
       cx: number;
       cy: number;
@@ -91,7 +95,9 @@ export function Node(props: NodeProps) {
         });
       });
     });
+
     const onMoveTail = (e: PointerEvent) => {
+      let toPath: [number, string] | null = null;
       const coords = toCanvasCoords(e.clientX, e.clientY);
       setHandleCoords(coords);
       const overlaps: {
@@ -104,15 +110,15 @@ export function Node(props: NodeProps) {
         const d2 = dx * dx + dy * dy;
 
         const ignoringFirst =
-          ignorePath &&
-          node.path[0] === ignorePath![0] &&
-          node.path[1] === ignorePath![1];
+          oldToPath &&
+          node.path[0] === oldToPath![0] &&
+          node.path[1] === oldToPath![1];
         if (d2 < R_SQUARED) {
           if (!ignoringFirst) {
             overlaps.push({ dist: d2, path: node.path });
           }
         } else if (ignoringFirst) {
-          ignorePath = null;
+          oldToPath = null;
         }
       });
 
@@ -155,7 +161,80 @@ export function Node(props: NodeProps) {
     document.addEventListener("pointerup", onReleaseTail);
   };
 
+  const onPointerDownHead = (key, input) => (e) => {
+    e.stopImmediatePropagation();
+    const coords = toCanvasCoords(e.clientX, e.clientY);
+    setHandleCoords(coords);
+
+    let fromId = input.from;
+    if (fromId != null) {
+      setGhostHead(fromId);
+      setNodes(props.id, "inputs", key, "from", null);
+      onPointerDownTail(fromId, [props.id, key]);
+    } else {
+      const toPath = [props.id, key] as [number, string];
+      setGhostTail(toPath);
+
+      // TODO depth list
+      const validHeadSlots = nodes.filter(
+        (node) =>
+          node != null &&
+          node.id !== props.id &&
+          node.output.type === input.type
+      ) as NodeCommon[];
+
+      const onMoveHead = (e: PointerEvent) => {
+        const coords = toCanvasCoords(e.clientX, e.clientY);
+        setHandleCoords(coords);
+
+        const overlaps: { dist: number; id: number }[] = [];
+        validHeadSlots.forEach((node) => {
+          const cx = node.x + node.output.cx;
+          const cy = node.y + node.output.cy;
+
+          const dx = coords.x - cx;
+          const dy = coords.y - cy;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < R_SQUARED) {
+            overlaps.push({ dist: d2, id: node.id });
+          }
+        });
+
+        if (overlaps.length) {
+          for (let i = 1; i < overlaps.length; i++) {
+            if (overlaps[i].dist < overlaps[0].dist) {
+              overlaps[0].dist = overlaps[i].dist;
+              overlaps[0].id = overlaps[i].id;
+            }
+          }
+          let newId = overlaps[0].id;
+          if (fromId === newId) return;
+          fromId = newId;
+          setGhostHead(fromId);
+          setNodes(props.id, "inputs", key, "from", fromId);
+        } else {
+          if (fromId == null) return;
+          fromId = null;
+          setGhostHead(null);
+          setNodes(props.id, "inputs", key, "from", null);
+        }
+      };
+      const onReleaseHead = () => {
+        document.removeEventListener("pointermove", onMoveHead);
+        document.removeEventListener("pointerup", onReleaseHead);
+        batch(() => {
+          setGhostHead(null);
+          setGhostTail(null);
+        });
+      };
+
+      document.addEventListener("pointermove", onMoveHead);
+      document.addEventListener("pointerup", onReleaseHead);
+    }
+  };
+
   const outputValue = () => {
+    // TODO validate preview value
     const inputs = {};
     Object.entries(props.inputs).forEach(([key, input]) => {
       if (input.from != null) {
@@ -172,7 +251,6 @@ export function Node(props: NodeProps) {
       if (output == null) return;
       preview().replaceChildren(toDom(output));
     }
-    // console.log("calc outputValue", props.id, inputs, output);
     return output;
   };
 
@@ -180,7 +258,7 @@ export function Node(props: NodeProps) {
     <div
       ref={nodeRef!}
       classList={{
-        "absolute text-white bg-back-subtle p-4 border": true,
+        "absolute bg-back-subtle p-4 border": true,
       }}
       style={{
         translate: `${props.x}px ${props.y}px`,
@@ -217,102 +295,20 @@ export function Node(props: NodeProps) {
                   <div
                     ref={inputHandleRefs[i()]}
                     class="absolute rounded-full -left-2 w-4 h-4 border bg-back-subtle"
-                    onPointerDown={(e) => {
-                      e.stopImmediatePropagation();
-                      const coords = toCanvasCoords(e.clientX, e.clientY);
-                      setHandleCoords(coords);
-
-                      let fromId = input.from;
-                      if (fromId != null) {
-                        setGhostHead(fromId);
-                        setNodes(props.id, "inputs", key, "from", null);
-                        onPointerDownTail(fromId, [props.id, key]);
-                      } else {
-                        const toPath = [props.id, key] as [number, string];
-                        setGhostTail(toPath);
-
-                        // TODO depth list
-                        const validHeadSlots = nodes.filter(
-                          (node) =>
-                            node != null &&
-                            node.id !== props.id &&
-                            node.output.type === input.type
-                        ) as NodeCommon[];
-
-                        const onMoveHead = (e: PointerEvent) => {
-                          const coords = toCanvasCoords(e.clientX, e.clientY);
-                          setHandleCoords(coords);
-
-                          const overlaps: { dist: number; id: number }[] = [];
-                          validHeadSlots.forEach((node) => {
-                            const cx = node.x + node.output.cx;
-                            const cy = node.y + node.output.cy;
-
-                            const dx = coords.x - cx;
-                            const dy = coords.y - cy;
-                            const d2 = dx * dx + dy * dy;
-                            if (d2 < R_SQUARED) {
-                              overlaps.push({ dist: d2, id: node.id });
-                            }
-                          });
-
-                          if (overlaps.length) {
-                            for (let i = 1; i < overlaps.length; i++) {
-                              if (overlaps[i].dist < overlaps[0].dist) {
-                                overlaps[0].dist = overlaps[i].dist;
-                                overlaps[0].id = overlaps[i].id;
-                              }
-                            }
-                            let newId = overlaps[0].id;
-                            if (fromId === newId) return;
-                            fromId = newId;
-                            setGhostHead(fromId);
-                            setNodes(props.id, "inputs", key, "from", fromId);
-                          } else {
-                            if (fromId == null) return;
-                            fromId = null;
-                            setGhostHead(null);
-                            setNodes(props.id, "inputs", key, "from", null);
-                          }
-                        };
-                        const onReleaseHead = () => {
-                          document.removeEventListener(
-                            "pointermove",
-                            onMoveHead
-                          );
-                          document.removeEventListener(
-                            "pointerup",
-                            onReleaseHead
-                          );
-                          batch(() => {
-                            setGhostHead(null);
-                            setGhostTail(null);
-                          });
-                        };
-
-                        document.addEventListener("pointermove", onMoveHead);
-                        document.addEventListener("pointerup", onReleaseHead);
-                      }
-                    }}
+                    onPointerDown={onPointerDownHead(key, input)}
                   ></div>
-                  <ResizingTextInput
-                    defaultValue={
+                  <Dynamic
+                    component={INPUT_MAP[input.type] ?? TextInput}
+                    value={
                       input.from != null
                         ? nodes[input.from!]!.output.value
                         : input.value
                     }
                     disabled={input.from != null}
-                    placeholder="Enter text..."
-                    onInput={(e) => {
-                      updateNodePos();
-                      setNodes(
-                        props.id,
-                        "inputs",
-                        key,
-                        "value",
-                        e.currentTarget.value
-                      );
+                    onValue={(v) => {
+                      setNodes(props.id, "inputs", key, "value", v);
                     }}
+                    {...input.props}
                   />
                 </div>
               </div>
@@ -339,32 +335,17 @@ export function Node(props: NodeProps) {
             <Show
               when={Object.keys(props.inputs).length}
               fallback={
-                <Switch>
-                  <Match when={props.output.type === "string"}>
-                    <ResizingTextInput
-                      defaultValue={(() => {
-                        // TODO gross
-                        setNodes(props.id, "output", "value", "");
-                        return "";
-                      })()}
-                      placeholder="Enter text..."
-                      onInput={(e) => {
-                        updateNodePos();
-                        setNodes(
-                          props.id,
-                          "output",
-                          "value",
-                          e.currentTarget.value
-                        );
-                      }}
-                    />
-                  </Match>
-                </Switch>
+                <Dynamic
+                  component={INPUT_MAP[props.output.type]}
+                  value={props.output.value}
+                  onValue={(v) => {
+                    setNodes(props.id, "output", "value", v);
+                  }}
+                  {...props.output.props}
+                />
               }
             >
-              <Switch
-                fallback={<TextInput defaultValue={outputValue()} disabled />}
-              >
+              <Switch fallback={<TextInput value={outputValue()} disabled />}>
                 <Match when={props.output.type === "display"}>
                   <DisplayOutput output={outputValue()} />
                 </Match>
@@ -388,3 +369,9 @@ function DisplayOutput(props) {
   });
   return <div ref={ref!} class="h-full w-full aspect-1/1 checkerboard"></div>;
 }
+
+const INPUT_MAP = {
+  string: ResizingTextInput,
+  number: NumberInput,
+  select: Select,
+};

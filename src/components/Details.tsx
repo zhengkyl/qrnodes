@@ -6,7 +6,7 @@ export function Details() {
   const { nodes, activeIds } = useNodesContext();
 
   return (
-    <div class="w-full h-full p-2 overflow-scroll break-words">
+    <div class="w-full h-full p-2 overflow-y-auto break-words whitespace-break-spaces">
       <Show when={activeIds().length}>
         {prettyPrint(unwrap(nodes[activeIds()[0]]!.output.value))}
       </Show>
@@ -17,7 +17,7 @@ export function Details() {
 const TypedArray = Object.getPrototypeOf(Uint8Array);
 
 const prettyPrint = (arg) => {
-  if (arg == null) return null;
+  if (arg == null) return arg;
   switch (typeof arg) {
     case "object": {
       if (arg instanceof TypedArray) {
