@@ -8,7 +8,7 @@ type Props = {
   step?: number;
   disabled?: boolean;
   value?: number;
-  onValue: (v: number) => void;
+  onValue?: (v: number) => void;
 };
 
 export function NumberInput(props: Props) {
@@ -21,7 +21,7 @@ export function NumberInput(props: Props) {
       rawValue={props.value}
       onRawValueChange={(v) => {
         if (Number.isNaN(v)) return;
-        props.onValue(v);
+        props.onValue?.(v);
       }}
       disabled={props.disabled}
     >

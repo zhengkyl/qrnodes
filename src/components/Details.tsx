@@ -8,13 +8,18 @@ export function Details() {
   return (
     <div class="w-full h-full p-2 overflow-y-auto break-words whitespace-break-spaces">
       <Show when={activeIds().length}>
-        {prettyPrint(unwrap(nodes[activeIds()[0]]!.output.value))}
+        {prettyOutput(nodes[activeIds()[0]]!.output)}
       </Show>
     </div>
   );
 }
 
 const TypedArray = Object.getPrototypeOf(Uint8Array);
+
+const prettyOutput = (output) => {
+  if (output.type === "display") return output.value;
+  return prettyPrint(unwrap(output.value));
+};
 
 const prettyPrint = (arg) => {
   if (arg == null) return arg;

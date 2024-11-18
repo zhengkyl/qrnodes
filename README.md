@@ -6,6 +6,8 @@ node-based editor for QR codes
 
 ## Todo
 
+- text selected by select box in chrome (preventDefault breaks input focus events)
+
 ## Inspiration
 
 - https://svgfm.chriskirknielsen.com/

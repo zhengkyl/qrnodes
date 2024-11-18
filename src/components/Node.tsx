@@ -1,23 +1,16 @@
-import { toDom } from "hast-util-to-dom";
-import {
-  batch,
-  createEffect,
-  For,
-  Match,
-  onMount,
-  Show,
-  Switch,
-} from "solid-js";
+import { batch, For, Match, onMount, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { useCanvasContext } from "./Canvas";
+import { useCanvasContext, type TailPath } from "./Canvas";
 import { useNodesContext, type NodeCommon } from "./context/NodesContext";
 import { NumberInput } from "./ui/NumberInput";
 import { ResizingTextInput, TextInput } from "./ui/TextInput";
 import { Select } from "./ui/Select";
+import { unwrap } from "solid-js/store";
+import { equal } from "../util/path";
 
 type NodeProps = NodeCommon;
 
-const R_SQUARED = 40 * 40;
+const R_SQUARED = 20 * 20;
 
 export function Node(props: NodeProps) {
   const {
@@ -31,6 +24,18 @@ export function Node(props: NodeProps) {
   const { nodes, setNodes, activeIds } = useNodesContext();
 
   onMount(() => {
+    const updateHandlePos = (ref, partialPath) => {
+      const handle = ref.getBoundingClientRect();
+      const { x, y } = toCanvasCoords(
+        handle.x + handle.width / 2,
+        handle.y + handle.height / 2
+      );
+      // @ts-expect-error
+      setNodes(props.id, ...partialPath, {
+        cx: x - props.x,
+        cy: y - props.y,
+      });
+    };
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const width = entry.borderBoxSize[0].inlineSize;
@@ -38,28 +43,19 @@ export function Node(props: NodeProps) {
 
         setNodes(props.id, { width, height });
 
-        Object.keys(props.inputs).forEach((key, i) => {
-          const handle = inputHandleRefs[i].getBoundingClientRect();
-          const { x, y } = toCanvasCoords(
-            handle.x + handle.width / 2,
-            handle.y + handle.height / 2
-          );
-          setNodes(props.id, "inputs", key, {
-            cx: x - props.x,
-            cy: y - props.y,
-          });
+        Object.entries(props.inputs).forEach(([key, input], i) => {
+          if (input.type === "array") {
+            for (let j = 0; j < input.array.length; j++) {
+              updateHandlePos(inputHandles[i][j], ["inputs", key, "array", j]);
+            }
+          } else {
+            updateHandlePos(inputHandles[i], ["inputs", key]);
+          }
         });
 
-        if (outputHandleRef == null) return;
-        const handle = outputHandleRef.getBoundingClientRect();
-        const { x, y } = toCanvasCoords(
-          handle.x + handle.width / 2,
-          handle.y + handle.height / 2
-        );
-        setNodes(props.id, "output", {
-          cx: x - props.x,
-          cy: y - props.y,
-        });
+        if (outputHandle != null) {
+          updateHandlePos(outputHandle, ["output"]);
+        }
       }
     });
 
@@ -67,17 +63,15 @@ export function Node(props: NodeProps) {
   });
 
   let nodeRef: HTMLDivElement;
-  const inputHandleRefs: HTMLDivElement[] = [];
-  let outputHandleRef: HTMLDivElement;
+  const inputHandles: (HTMLDivElement | HTMLDivElement[])[] = [];
+  let outputHandle: HTMLDivElement;
 
-  const onPointerDownTail = (
-    fromId: number,
-    oldToPath: [number, string] | null
-  ) => {
-    const validNodes: {
+  const onPointerDownTail = (fromId: number, oldToPath: TailPath | null) => {
+    const validType = nodes[fromId]!.output.type;
+    const validInputs: {
       cx: number;
       cy: number;
-      path: [number, string];
+      path: TailPath;
     }[] = [];
 
     nodes.forEach((node) => {
@@ -86,38 +80,47 @@ export function Node(props: NodeProps) {
       const entries = Object.entries(node.inputs);
 
       entries.forEach(([key, input]) => {
-        if (input.from != null) return;
-        if (input.type !== nodes[fromId]!.output.type) return;
-        validNodes.push({
-          cx: node.x + input.cx,
-          cy: node.y + input.cy,
-          path: [node.id, key],
-        });
+        if (input.type === "array") {
+          input.array.forEach((item, j) => {
+            if (item.from != null) return;
+            if (item.type !== validType) return;
+            validInputs.push({
+              cx: node.x + item.cx,
+              cy: node.y + item.cy,
+              path: [node.id, "inputs", key, "array", j],
+            });
+          });
+        } else {
+          if (input.from != null) return;
+          if (input.type !== validType) return;
+          validInputs.push({
+            cx: node.x + input.cx,
+            cy: node.y + input.cy,
+            path: [node.id, "inputs", key],
+          });
+        }
       });
     });
 
     const onMoveTail = (e: PointerEvent) => {
-      let toPath: [number, string] | null = null;
+      let toPath: TailPath | null = null;
       const coords = toCanvasCoords(e.clientX, e.clientY);
       setHandleCoords(coords);
       const overlaps: {
         dist: number;
-        path: [number, string];
+        path: TailPath;
       }[] = [];
-      validNodes.forEach((node) => {
-        const dx = coords.x - node.cx;
-        const dy = coords.y - node.cy;
+      validInputs.forEach((input) => {
+        const dx = coords.x - input.cx;
+        const dy = coords.y - input.cy;
         const d2 = dx * dx + dy * dy;
 
-        const ignoringFirst =
-          oldToPath &&
-          node.path[0] === oldToPath![0] &&
-          node.path[1] === oldToPath![1];
+        const isOldPath = oldToPath && equal(input.path, oldToPath);
         if (d2 < R_SQUARED) {
-          if (!ignoringFirst) {
-            overlaps.push({ dist: d2, path: node.path });
+          if (!isOldPath) {
+            overlaps.push({ dist: d2, path: input.path });
           }
-        } else if (ignoringFirst) {
+        } else if (isOldPath) {
           oldToPath = null;
         }
       });
@@ -130,20 +133,18 @@ export function Node(props: NodeProps) {
           }
         }
         const newPath = overlaps[0].path;
-        if (
-          toPath != null &&
-          toPath[0] === newPath[0] &&
-          toPath[1] === newPath[1]
-        ) {
+        if (toPath != null && equal(toPath, newPath)) {
           return;
         }
         toPath = newPath;
         setGhostTail(toPath);
-        setNodes(toPath[0], "inputs", toPath[1], "from", fromId);
+        // @ts-expect-error
+        setNodes(...toPath, "from", fromId);
       } else {
         if (toPath == null) return;
         setGhostTail(null);
-        setNodes(toPath[0], "inputs", toPath[1], "from", null);
+        // @ts-expect-error
+        setNodes(...toPath, "from", null);
         toPath = null;
       }
     };
@@ -161,7 +162,8 @@ export function Node(props: NodeProps) {
     document.addEventListener("pointerup", onReleaseTail);
   };
 
-  const onPointerDownHead = (key, input) => (e) => {
+  const onPointerDownHead = (path, input) => (e) => {
+    e.preventDefault(); // don't trigger img drag
     e.stopImmediatePropagation();
     const coords = toCanvasCoords(e.clientX, e.clientY);
     setHandleCoords(coords);
@@ -169,11 +171,11 @@ export function Node(props: NodeProps) {
     let fromId = input.from;
     if (fromId != null) {
       setGhostHead(fromId);
-      setNodes(props.id, "inputs", key, "from", null);
-      onPointerDownTail(fromId, [props.id, key]);
+      // @ts-expect-error
+      setNodes(...path, "from", null);
+      onPointerDownTail(fromId, path);
     } else {
-      const toPath = [props.id, key] as [number, string];
-      setGhostTail(toPath);
+      setGhostTail(path);
 
       // TODO depth list
       const validHeadSlots = nodes.filter(
@@ -211,12 +213,14 @@ export function Node(props: NodeProps) {
           if (fromId === newId) return;
           fromId = newId;
           setGhostHead(fromId);
-          setNodes(props.id, "inputs", key, "from", fromId);
+          // @ts-expect-error
+          setNodes(...path, "from", fromId);
         } else {
           if (fromId == null) return;
           fromId = null;
           setGhostHead(null);
-          setNodes(props.id, "inputs", key, "from", null);
+          // @ts-expect-error
+          setNodes(...path, "from", null);
         }
       };
       const onReleaseHead = () => {
@@ -237,19 +241,30 @@ export function Node(props: NodeProps) {
     // TODO validate preview value
     const inputs = {};
     Object.entries(props.inputs).forEach(([key, input]) => {
-      if (input.from != null) {
-        inputs[key] = nodes[input.from]!.output.value;
+      if (input.type === "array") {
+        inputs[key] = [];
+        input.array.forEach((item, j) => {
+          if (item.from != null) {
+            inputs[key][j] = nodes[item.from]!.output.value;
+          } else {
+            inputs[key][j] = item.value;
+          }
+        });
       } else {
-        inputs[key] = input.value;
+        if (input.from != null) {
+          inputs[key] = nodes[input.from]!.output.value;
+        } else {
+          inputs[key] = input.value;
+        }
       }
+      unwrap(inputs[key]);
     });
     const output = props.function(inputs);
     setNodes(props.id, "output", "value", output);
 
     if (props.output.type === "display") {
-      console.log("display");
-      if (output == null) return;
-      preview().replaceChildren(toDom(output));
+      if (output == null) return null;
+      preview().innerHTML = output;
     }
     return output;
   };
@@ -288,15 +303,73 @@ export function Node(props: NodeProps) {
         <div class="select-none font-bold leading-none">{props.title}</div>
         <For each={Object.entries(props.inputs)}>
           {([key, input], i) => {
+            if (input.type === "array") {
+              inputHandles[i()] = [];
+              return (
+                <div>
+                  <div class="select-none text-sm">{input.label}</div>
+                  <For each={input.array}>
+                    {(item, j) => {
+                      return (
+                        <div class="flex items-center">
+                          <div
+                            ref={inputHandles[i()][j()]}
+                            class="absolute -left-4 w-8 h-8"
+                            onPointerDown={onPointerDownHead(
+                              [props.id, "inputs", key, "array", j()],
+                              item
+                            )}
+                          >
+                            <div class="border rounded-full bg-back-subtle m-2 w-4 h-4"></div>
+                          </div>
+                          <Dynamic
+                            component={INPUT_MAP[item.type] ?? TextInput}
+                            value={
+                              item.from != null
+                                ? nodes[item.from!]!.output.value
+                                : item.value
+                            }
+                            disabled={item.from != null}
+                            onValue={
+                              item.from != null
+                                ? null
+                                : (v) => {
+                                    setNodes(
+                                      props.id,
+                                      "inputs",
+                                      key,
+                                      // @ts-expect-error
+                                      "array",
+                                      j(),
+                                      "value",
+                                      v
+                                    );
+                                  }
+                            }
+                            {...item.props}
+                          />
+                        </div>
+                      );
+                    }}
+                  </For>
+                </div>
+              );
+            }
             return (
               <div>
                 <div class="select-none text-sm">{input.label}</div>
                 <div class="flex items-center">
                   <div
-                    ref={inputHandleRefs[i()]}
-                    class="absolute rounded-full -left-2 w-4 h-4 border bg-back-subtle"
-                    onPointerDown={onPointerDownHead(key, input)}
-                  ></div>
+                    // @ts-expect-error
+                    ref={inputHandles[i()]}
+                    class="absolute -left-4 w-8 h-8"
+                    onPointerDown={onPointerDownHead(
+                      [props.id, "inputs", key],
+                      input
+                    )}
+                  >
+                    <div class="border rounded-full bg-back-subtle m-2 w-4 h-4"></div>
+                  </div>
                   <Dynamic
                     component={INPUT_MAP[input.type] ?? TextInput}
                     value={
@@ -305,9 +378,14 @@ export function Node(props: NodeProps) {
                         : input.value
                     }
                     disabled={input.from != null}
-                    onValue={(v) => {
-                      setNodes(props.id, "inputs", key, "value", v);
-                    }}
+                    onValue={
+                      input.from != null
+                        ? null
+                        : (v) => {
+                            // @ts-expect-error
+                            setNodes(props.id, "inputs", key, "value", v);
+                          }
+                    }
                     {...input.props}
                   />
                 </div>
@@ -320,9 +398,10 @@ export function Node(props: NodeProps) {
           <div class="flex items-center">
             <Show when={props.output.type !== "display"}>
               <div
-                ref={outputHandleRef!}
-                class="absolute -right-2 w-4 h-4 border bg-back-subtle"
+                ref={outputHandle!}
+                class="absolute -right-4 w-8 h-8"
                 onPointerDown={(e) => {
+                  e.preventDefault(); // don't trigger img drag
                   e.stopImmediatePropagation();
                   const coords = toCanvasCoords(e.clientX, e.clientY);
                   setHandleCoords(coords);
@@ -330,7 +409,9 @@ export function Node(props: NodeProps) {
                   setGhostHead(props.id);
                   onPointerDownTail(props.id, null);
                 }}
-              ></div>
+              >
+                <div class="border bg-back-subtle m-2 w-4 h-4"></div>
+              </div>
             </Show>
             <Show
               when={Object.keys(props.inputs).length}
@@ -359,15 +440,12 @@ export function Node(props: NodeProps) {
 }
 
 function DisplayOutput(props) {
-  let ref: HTMLDivElement;
-  createEffect(() => {
-    if (props.output == null) {
-      ref.replaceChildren();
-    } else {
-      ref.replaceChildren(toDom(props.output));
-    }
-  });
-  return <div ref={ref!} class="h-full w-full aspect-1/1 checkerboard"></div>;
+  return (
+    <div
+      class="h-full w-full aspect-1/1 checkerboard"
+      innerHTML={props.output}
+    ></div>
+  );
 }
 
 const INPUT_MAP = {

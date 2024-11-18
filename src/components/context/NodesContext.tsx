@@ -64,9 +64,17 @@ export function baseToNode<T extends InputsBase>(
 
   const values = Object.values(node.inputs);
   values.forEach((input) => {
-    input.from = null;
-    input.cx = 0;
-    input.cy = 0;
+    if (input.type === "array") {
+      input.array.forEach((item) => {
+        item.from = null;
+        item.cx = 0;
+        item.cy = 0;
+      });
+    } else {
+      input.from = null;
+      input.cx = 0;
+      input.cy = 0;
+    }
   });
   node.output.value = values.length ? null : node.function({});
   node.output.cx = 0;
@@ -82,7 +90,7 @@ type InputsBase = {
   [key: string]: {
     type: string;
     label: string;
-    value: any; // depends on type
+    [key: string]: any;
   };
 };
 type NodeBase<T extends InputsBase> = {
@@ -100,6 +108,25 @@ type NodeBase<T extends InputsBase> = {
   function: (inputs: { [K in keyof T]: any }) => Promise<any> | any;
 };
 
+type Field = {
+  type: "string" | "number" | "select" | "display";
+  label: string;
+  value: any; // depends on type
+  cx: number; // relative to node
+  cy: number; // relative to node
+  props?: {
+    [key: string]: any;
+  };
+};
+
+export type InputField = Field & {
+  from: null | number;
+};
+export type ArrayInputField = {
+  type: "array";
+  label: string;
+  array: InputField[];
+};
 export type NodeCommon = {
   id: number;
   x: number;
@@ -108,28 +135,9 @@ export type NodeCommon = {
   height: number;
   title: string;
   inputs: {
-    [key: string]: {
-      type: string;
-      label: string;
-      value: any; // depends on type
-      from: null | number;
-      cx: number; // relative to node
-      cy: number; // relative to node
-      props?: {
-        [key: string]: any;
-      };
-    };
+    [key: string]: InputField | ArrayInputField;
   };
-  output: {
-    type: string;
-    label: string;
-    value: any; // depends on type
-    cx: number; // relative to node
-    cy: number; // relative to node
-    props?: {
-      [key: string]: any;
-    };
-  };
+  output: Field;
   /// should match inputs and output, prob not possible to type
   function: (inputs: any) => any;
 };

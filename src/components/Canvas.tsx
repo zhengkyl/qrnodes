@@ -8,7 +8,12 @@ import {
   type Accessor,
   type Setter,
 } from "solid-js";
-import { useNodesContext } from "./context/NodesContext";
+import {
+  useNodesContext,
+  type ArrayInputField,
+  type InputField,
+  type NodeCommon,
+} from "./context/NodesContext";
 import { Node } from "./Node";
 import { NODE_MAP } from "./nodes/factory";
 import { containsPoint } from "../util/rect";
@@ -18,12 +23,16 @@ export type Coords = {
   y: number;
 };
 
+export type TailPath =
+  | [number, "inputs", string]
+  | [number, "inputs", string, "array", number];
+
 export const CanvasContext = createContext<{
   canvasScale: Accessor<number>;
   toCanvasCoords: (clientX, clientY) => { x: number; y: number };
   setHandleCoords: Setter<{ x: number; y: number } | null>;
   setGhostHead: Setter<number | null>;
-  setGhostTail: Setter<[number, string] | null>;
+  setGhostTail: Setter<TailPath | null>;
   preview: Accessor<HTMLDivElement>;
   // setCanvasScale: Setter<number>;
   // canvasOffset: Accessor<{ x: number; y: number }>;
@@ -331,7 +340,7 @@ export function Canvas(props) {
   };
 
   const [ghostHead, setGhostHead] = createSignal<number | null>(null);
-  const [ghostTail, setGhostTail] = createSignal<[number, string] | null>(null);
+  const [ghostTail, setGhostTail] = createSignal<TailPath | null>(null);
 
   const [handleCoords, setHandleCoords] = createSignal<{
     x: number;
@@ -367,6 +376,7 @@ export function Canvas(props) {
       }}
       onPointerDown={(e) => {
         if (e.button === 0) {
+          e.stopImmediatePropagation();
           const coords = toCanvasCoords(e.clientX, e.clientY);
 
           const ids = getIdsAtPoint(coords.x, coords.y);
@@ -405,7 +415,7 @@ export function Canvas(props) {
       }}
       onWheel={(e) => {
         if (e.ctrlKey || e.metaKey) {
-          e.preventDefault();
+          e.preventDefault(); // don't zoom browser
           const oldScale = canvasScale();
           let deltaY = e.deltaY;
           const sign = Math.sign(deltaY);
@@ -546,65 +556,39 @@ export function Canvas(props) {
           }}
         >
           <Index each={nodes}>
-            {(node, i) => {
-              console.log("index", i);
-              return (
-                <Show when={node()}>
-                  {(currr) => {
-                    const curr = currr();
-                    return (
-                      <Index each={Object.entries(curr.inputs)}>
-                        {(entry) => {
-                          const [_, input] = entry();
+            {(nodeOrNull) => (
+              <Show when={nodeOrNull()}>
+                {(_node) => {
+                  const node = _node();
+                  return (
+                    <Index each={Object.values(node.inputs)}>
+                      {(_input) => {
+                        const input = _input();
+                        if (input.type === "array") {
                           return (
-                            <Show when={input.from != null}>
-                              {(_) => {
-                                const headId = input.from!;
-                                const start = nodes[headId]!;
-                                const d = () => {
-                                  const startX =
-                                    start.x + start.output.cx + BEZIER_HANDLE;
-                                  const startY = start.y + start.output.cy;
-                                  const endX =
-                                    curr.x + input.cx + -BEZIER_HANDLE;
-                                  const endY = curr.y + input.cy;
-                                  return connectPath(
-                                    startX,
-                                    startY,
-                                    endX,
-                                    endY
-                                  );
-                                };
-                                return (
-                                  <svg class="absolute overflow-visible pointer-events-none">
-                                    <path
-                                      fill="none"
-                                      stroke="rgb(137 137 137)"
-                                      stroke-width={4}
-                                      stroke-dasharray="8 12"
-                                      stroke-linecap="round"
-                                      d={d()}
-                                    >
-                                      <animate
-                                        attributeName="stroke-dashoffset"
-                                        from="0"
-                                        to="20"
-                                        dur="800ms"
-                                        repeatCount="indefinite"
-                                      />
-                                    </path>
-                                  </svg>
-                                );
-                              }}
-                            </Show>
+                            <For each={input.array}>
+                              {(item) => (
+                                <Show when={item.from != null}>
+                                  <PlacedConnectorTail
+                                    node={node}
+                                    input={item}
+                                  />
+                                </Show>
+                              )}
+                            </For>
                           );
-                        }}
-                      </Index>
-                    );
-                  }}
-                </Show>
-              );
-            }}
+                        }
+                        return (
+                          <Show when={input.from != null}>
+                            <PlacedConnectorTail node={node} input={input} />
+                          </Show>
+                        );
+                      }}
+                    </Index>
+                  );
+                }}
+              </Show>
+            )}
           </Index>
           <Show when={(ghostHead() == null) != (ghostTail() == null)}>
             {(_) => {
@@ -620,9 +604,14 @@ export function Canvas(props) {
                   endX = otherCoords.x - BEZIER_HANDLE;
                   endY = otherCoords.y;
                 } else {
-                  const tailPath = ghostTail()!;
-                  const node = nodes[tailPath[0]]!;
-                  const input = node.inputs[tailPath[1]];
+                  const path = ghostTail()!;
+                  const node = nodes[path[0]]!;
+                  const input =
+                    path.length === 3
+                      ? (node.inputs[path[2]] as InputField)
+                      : (node.inputs[path[2]] as ArrayInputField).array[
+                          path[4]
+                        ];
                   endX = node.x + input.cx - BEZIER_HANDLE;
                   endY = node.y + input.cy;
                   startX = otherCoords.x + BEZIER_HANDLE;
@@ -630,18 +619,7 @@ export function Canvas(props) {
                 }
                 return connectPath(startX, startY, endX, endY);
               };
-              return (
-                <svg class="absolute overflow-visible pointer-events-none">
-                  <path
-                    fill="none"
-                    stroke="rgb(137 137 137)"
-                    stroke-width={4}
-                    stroke-dasharray="8 12"
-                    stroke-linecap="round"
-                    d={d()}
-                  />
-                </svg>
-              );
+              return <ConnectorTail d={d()} />;
             }}
           </Show>
           <Index each={nodes}>
@@ -669,7 +647,10 @@ export function Canvas(props) {
               {(_) => {
                 const path = ghostTail()!;
                 const node = nodes[path[0]]!;
-                const input = node.inputs[path[1]];
+                const input =
+                  path.length === 3
+                    ? (node.inputs[path[2]] as InputField)
+                    : (node.inputs[path[2]] as ArrayInputField).array[path[4]];
                 return (
                   <circle
                     cx={node.x + input.cx}
@@ -711,5 +692,45 @@ export function Canvas(props) {
         </div>
       </CanvasContext.Provider>
     </div>
+  );
+}
+
+function PlacedConnectorTail(props: { node: NodeCommon; input: InputField }) {
+  const { nodes } = useNodesContext();
+  const headId = props.input.from!;
+  const start = nodes[headId]!;
+  const d = () => {
+    const startX = start.x + start.output.cx + BEZIER_HANDLE;
+    const startY = start.y + start.output.cy;
+    const endX = props.node.x + props.input.cx + -BEZIER_HANDLE;
+    const endY = props.node.y + props.input.cy;
+    return connectPath(startX, startY, endX, endY);
+  };
+  return (
+    <ConnectorTail d={d()}>
+      <animate
+        attributeName="stroke-dashoffset"
+        from="0"
+        to="20"
+        dur="800ms"
+        repeatCount="indefinite"
+      />
+    </ConnectorTail>
+  );
+}
+function ConnectorTail(props) {
+  return (
+    <svg class="absolute overflow-visible pointer-events-none">
+      <path
+        fill="none"
+        stroke="rgb(137 137 137)"
+        stroke-width={4}
+        stroke-dasharray="8 12"
+        stroke-linecap="round"
+        d={props.d}
+      >
+        {props.children}
+      </path>
+    </svg>
   );
 }

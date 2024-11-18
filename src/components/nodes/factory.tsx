@@ -1,6 +1,8 @@
 import { baseToNode } from "../context/NodesContext";
 import { generate, QrOptions, Version } from "fuqr";
+import { toHtml } from "hast-util-to-html";
 import { s } from "hastscript";
+import { feTurbulenceNode } from "./filters";
 
 export function textNode({ x, y }) {
   return baseToNode({
@@ -54,7 +56,8 @@ export function displayNode({ x, y }) {
       label: "Output",
     },
     function: (inputs) => {
-      return inputs.hast;
+      if (inputs.hast == null) return null;
+      return toHtml(inputs.hast);
     },
   });
 }
@@ -73,21 +76,13 @@ export function fuqrNode({ x, y }) {
           placeholder: "Enter text...",
         },
       },
-      mode: {
-        type: "select",
-        label: "Encoding",
-        value: "Auto",
-        props: {
-          options: ["Auto", "Numeric", "Alphanumeric", "Byte"],
-        },
-      },
       minVersion: {
         type: "number",
         label: "Min version",
         value: 1,
         props: {
           min: 1,
-          max: 4,
+          max: 40,
         },
       },
       minEcl: {
@@ -112,10 +107,16 @@ export function fuqrNode({ x, y }) {
       label: "QR Code",
     },
     function: (inputs) => {
-      return generate(
-        inputs.text,
-        new QrOptions().min_version(new Version(inputs.minVersion))
-      );
+      if (inputs.minVersion < 1 || inputs.minVersion > 40) return null;
+
+      const ecl = ["Low", "Medium", "Quartile", "High"];
+      let options = new QrOptions()
+        .min_version(new Version(inputs.minVersion))
+        .min_ecl(ecl.indexOf(inputs.minEcl));
+      if (inputs.mask !== "Auto") {
+        options = options.mask(inputs.mask);
+      }
+      return generate(inputs.text, options);
     },
   });
 }
@@ -174,4 +175,5 @@ export const NODE_MAP = {
   "QR Code": fuqrNode,
   Renderer: renderNode,
   Display: displayNode,
+  Turbulence: feTurbulenceNode,
 };

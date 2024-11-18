@@ -3,8 +3,8 @@ import ChevronsUpDown from "lucide-solid/icons/chevrons-up-down";
 import { createSignal } from "solid-js";
 
 type Props = {
-  value: string;
-  onValue: (v: string) => void;
+  value?: string;
+  onValue?: (v: string) => void;
   options: string[];
 };
 
@@ -12,36 +12,41 @@ export function Select(props: Props) {
   // props.value changes on focus/highlight for quick preview
   // but the old value should be restored on esc/unfocus
   const [retainedValue, setRetainedValue] = createSignal(props.value);
+
+  const onValue = (v) => {
+    props.onValue?.(v);
+  };
   return (
     <KSelect
       value={retainedValue()}
       onChange={(v) => {
         if (v != null) {
-          props.onValue(v);
+          onValue(v);
           setRetainedValue(v);
         }
       }}
       onOpenChange={(isOpen) => {
         if (!isOpen && props.value !== retainedValue()) {
-          props.onValue(retainedValue());
+          onValue(retainedValue());
         }
       }}
       onKeyDown={(e) => {
-        const index = props.options.indexOf(props.value);
+        const index =
+          props.value == null ? 0 : props.options.indexOf(props.value);
         switch (e.key) {
           case "ArrowDown":
-            props.onValue(
+            onValue(
               props.options[Math.min(index + 1, props.options.length - 1)]
             );
             break;
           case "ArrowUp":
-            props.onValue(props.options[Math.max(index - 1, 0)]);
+            onValue(props.options[Math.max(index - 1, 0)]);
             break;
           case "Home":
-            props.onValue(props.options[0]);
+            onValue(props.options[0]);
             break;
           case "End":
-            props.onValue(props.options[props.options.length - 1]);
+            onValue(props.options[props.options.length - 1]);
             break;
         }
       }}
@@ -53,7 +58,7 @@ export function Select(props: Props) {
           class="flex justify-between items-center p-2 rounded select-none data-[highlighted]:(bg-fore-base/10 outline-none)"
           item={itemProps.item}
           onMouseEnter={() => {
-            props.onValue(itemProps.item.key);
+            onValue(itemProps.item.key);
           }}
         >
           <KSelect.Label>{itemProps.item.rawValue}</KSelect.Label>
