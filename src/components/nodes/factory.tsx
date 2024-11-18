@@ -48,7 +48,11 @@ export function displayNode({ x, y }) {
       hast: {
         type: "hast",
         label: "HTML AST",
-        value: null,
+        fields: [
+          {
+            value: null,
+          },
+        ],
       },
     },
     output: {
@@ -71,7 +75,11 @@ export function fuqrNode({ x, y }) {
       text: {
         type: "string",
         label: "Text",
-        value: "",
+        fields: [
+          {
+            value: "",
+          },
+        ],
         props: {
           placeholder: "Enter text...",
         },
@@ -79,7 +87,11 @@ export function fuqrNode({ x, y }) {
       minVersion: {
         type: "number",
         label: "Min version",
-        value: 1,
+        fields: [
+          {
+            value: 1,
+          },
+        ],
         props: {
           min: 1,
           max: 40,
@@ -88,7 +100,11 @@ export function fuqrNode({ x, y }) {
       minEcl: {
         type: "select",
         label: "Min ECL",
-        value: "Low",
+        fields: [
+          {
+            value: "Low",
+          },
+        ],
         props: {
           options: ["Low", "Medium", "Quartile", "High"],
         },
@@ -96,7 +112,11 @@ export function fuqrNode({ x, y }) {
       mask: {
         type: "select",
         label: "Mask",
-        value: "Auto",
+        fields: [
+          {
+            value: "Auto",
+          },
+        ],
         props: {
           options: ["Auto", 0, 1, 2, 3, 4, 5, 6, 7],
         },
@@ -130,7 +150,11 @@ export function renderNode({ x, y }) {
       qrCode: {
         type: "fuqr",
         label: "QR Code",
-        value: null,
+        fields: [
+          {
+            value: null,
+          },
+        ],
       },
     },
     output: {
@@ -138,7 +162,7 @@ export function renderNode({ x, y }) {
       label: "HTML AST",
     },
     function: (inputs) => {
-      if (inputs.qrCode == null) return;
+      if (inputs.qrCode == null) return null;
       const width = inputs.qrCode.version * 4 + 17;
 
       const margin = 2;

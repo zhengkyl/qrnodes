@@ -64,21 +64,17 @@ export function baseToNode<T extends InputsBase>(
 
   const values = Object.values(node.inputs);
   values.forEach((input) => {
-    if (input.type === "array") {
-      input.array.forEach((item) => {
-        item.from = null;
-        item.cx = 0;
-        item.cy = 0;
-      });
-    } else {
-      input.from = null;
-      input.cx = 0;
-      input.cy = 0;
-    }
+    input.fields.forEach((field) => {
+      field.from = null;
+      field.cx = 0;
+      field.cy = 0;
+    });
   });
-  node.output.value = values.length ? null : node.function({});
-  node.output.cx = 0;
-  node.output.cy = 0;
+  node.output.field = {
+    value: values.length ? null : node.function({}),
+    cx: 0,
+    cy: 0,
+  };
 
   node.id = 0;
   node.width = 0;
@@ -90,8 +86,24 @@ type InputsBase = {
   [key: string]: {
     type: string;
     label: string;
-    [key: string]: any;
-  };
+    props?: {
+      [key: string]: any;
+    };
+  } & (
+    | {
+        fields: [
+          {
+            value: any;
+          }
+        ];
+      }
+    | {
+        array: true;
+        fields: {
+          value: any;
+        }[];
+      }
+  );
 };
 type NodeBase<T extends InputsBase> = {
   x: number;
@@ -109,24 +121,14 @@ type NodeBase<T extends InputsBase> = {
 };
 
 type Field = {
-  type: "string" | "number" | "select" | "display";
-  label: string;
   value: any; // depends on type
   cx: number; // relative to node
   cy: number; // relative to node
-  props?: {
-    [key: string]: any;
-  };
+};
+export type InputField = Field & {
+  from: number | null;
 };
 
-export type InputField = Field & {
-  from: null | number;
-};
-export type ArrayInputField = {
-  type: "array";
-  label: string;
-  array: InputField[];
-};
 export type NodeCommon = {
   id: number;
   x: number;
@@ -135,9 +137,24 @@ export type NodeCommon = {
   height: number;
   title: string;
   inputs: {
-    [key: string]: InputField | ArrayInputField;
+    [key: string]: {
+      type: string;
+      label: string;
+      array: boolean;
+      fields: InputField[];
+      props?: {
+        [key: string]: any;
+      };
+    };
   };
-  output: Field;
+  output: {
+    type: string;
+    label: string;
+    field: Field;
+    props?: {
+      [key: string]: any;
+    };
+  };
   /// should match inputs and output, prob not possible to type
   function: (inputs: any) => any;
 };

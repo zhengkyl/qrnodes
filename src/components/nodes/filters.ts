@@ -10,26 +10,25 @@ export function feTurbulenceNode({ x, y }) {
       hast: {
         type: "hast",
         label: "SVG AST",
-        value: null,
-      },
-      filterEffects: {
-        type: "array",
-        label: "Filter effects",
-        array: [
+        fields: [
           {
-            type: "number",
-            label: "n1",
-            value: 0,
-          },
-          {
-            type: "number",
-            label: "in2",
-            value: 0,
+            value: null,
           },
         ],
-        props: {
-          type: "",
-        },
+      },
+      filterEffects: {
+        type: "fuqr",
+        label: "Filter effects",
+        array: true,
+        fields: [
+          {
+            value: null,
+          },
+          {
+            value: null,
+          },
+        ],
+        props: {},
       },
     },
     output: {
@@ -40,14 +39,14 @@ export function feTurbulenceNode({ x, y }) {
       },
     },
     function: (inputs) => {
-      if (inputs.hast === null) return null;
+      if (inputs.hast == null) return null;
       const root = structuredClone(inputs.hast);
       let defs = root.children.find((child) => child.tagName === "defs");
       if (defs == null) {
         defs = s("defs");
         root.children.unshift(defs);
       }
-      defs.push(s(""));
+      defs.children.push(s(""));
       return root;
     },
   });

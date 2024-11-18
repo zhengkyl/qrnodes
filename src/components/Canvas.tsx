@@ -10,11 +10,10 @@ import {
 } from "solid-js";
 import {
   useNodesContext,
-  type ArrayInputField,
   type InputField,
   type NodeCommon,
 } from "./context/NodesContext";
-import { Node } from "./Node";
+import { Node, type InputPathKey } from "./Node";
 import { NODE_MAP } from "./nodes/factory";
 import { containsPoint } from "../util/rect";
 
@@ -23,16 +22,12 @@ export type Coords = {
   y: number;
 };
 
-export type TailPath =
-  | [number, "inputs", string]
-  | [number, "inputs", string, "array", number];
-
 export const CanvasContext = createContext<{
   canvasScale: Accessor<number>;
   toCanvasCoords: (clientX, clientY) => { x: number; y: number };
   setHandleCoords: Setter<{ x: number; y: number } | null>;
   setGhostHead: Setter<number | null>;
-  setGhostTail: Setter<TailPath | null>;
+  setGhostTail: Setter<InputPathKey | null>;
   preview: Accessor<HTMLDivElement>;
   // setCanvasScale: Setter<number>;
   // canvasOffset: Accessor<{ x: number; y: number }>;
@@ -340,7 +335,7 @@ export function Canvas(props) {
   };
 
   const [ghostHead, setGhostHead] = createSignal<number | null>(null);
-  const [ghostTail, setGhostTail] = createSignal<TailPath | null>(null);
+  const [ghostTail, setGhostTail] = createSignal<InputPathKey | null>(null);
 
   const [handleCoords, setHandleCoords] = createSignal<{
     x: number;
@@ -564,24 +559,17 @@ export function Canvas(props) {
                     <Index each={Object.values(node.inputs)}>
                       {(_input) => {
                         const input = _input();
-                        if (input.type === "array") {
-                          return (
-                            <For each={input.array}>
-                              {(item) => (
-                                <Show when={item.from != null}>
-                                  <PlacedConnectorTail
-                                    node={node}
-                                    input={item}
-                                  />
-                                </Show>
-                              )}
-                            </For>
-                          );
-                        }
                         return (
-                          <Show when={input.from != null}>
-                            <PlacedConnectorTail node={node} input={input} />
-                          </Show>
+                          <For each={input.fields}>
+                            {(field) => (
+                              <Show when={field.from != null}>
+                                <PlacedConnectorTail
+                                  node={node}
+                                  field={field}
+                                />
+                              </Show>
+                            )}
+                          </For>
                         );
                       }}
                     </Index>
@@ -599,19 +587,14 @@ export function Canvas(props) {
                 const headId = ghostHead();
                 if (headId != null) {
                   const node = nodes[headId]!;
-                  startX = node.x + node.output.cx + BEZIER_HANDLE;
-                  startY = node.y + node.output.cy;
+                  startX = node.x + node.output.field.cx + BEZIER_HANDLE;
+                  startY = node.y + node.output.field.cy;
                   endX = otherCoords.x - BEZIER_HANDLE;
                   endY = otherCoords.y;
                 } else {
                   const path = ghostTail()!;
                   const node = nodes[path[0]]!;
-                  const input =
-                    path.length === 3
-                      ? (node.inputs[path[2]] as InputField)
-                      : (node.inputs[path[2]] as ArrayInputField).array[
-                          path[4]
-                        ];
+                  const input = node.inputs[path[1]].fields[path[2]];
                   endX = node.x + input.cx - BEZIER_HANDLE;
                   endY = node.y + input.cy;
                   startX = otherCoords.x + BEZIER_HANDLE;
@@ -635,8 +618,8 @@ export function Canvas(props) {
                 const node = nodes[ghostHead()!]!;
                 return (
                   <circle
-                    cx={node.x + node.output.cx}
-                    cy={node.y + node.output.cy}
+                    cx={node.x + node.output.field.cx}
+                    cy={node.y + node.output.field.cy}
                     r="7"
                     fill="white"
                   />
@@ -647,10 +630,7 @@ export function Canvas(props) {
               {(_) => {
                 const path = ghostTail()!;
                 const node = nodes[path[0]]!;
-                const input =
-                  path.length === 3
-                    ? (node.inputs[path[2]] as InputField)
-                    : (node.inputs[path[2]] as ArrayInputField).array[path[4]];
+                const input = node.inputs[path[1]].fields[path[2]];
                 return (
                   <circle
                     cx={node.x + input.cx}
@@ -695,15 +675,15 @@ export function Canvas(props) {
   );
 }
 
-function PlacedConnectorTail(props: { node: NodeCommon; input: InputField }) {
+function PlacedConnectorTail(props: { node: NodeCommon; field: InputField }) {
   const { nodes } = useNodesContext();
-  const headId = props.input.from!;
+  const headId = props.field.from!;
   const start = nodes[headId]!;
   const d = () => {
-    const startX = start.x + start.output.cx + BEZIER_HANDLE;
-    const startY = start.y + start.output.cy;
-    const endX = props.node.x + props.input.cx + -BEZIER_HANDLE;
-    const endY = props.node.y + props.input.cy;
+    const startX = start.x + start.output.field.cx + BEZIER_HANDLE;
+    const startY = start.y + start.output.field.cy;
+    const endX = props.node.x + props.field.cx + -BEZIER_HANDLE;
+    const endY = props.node.y + props.field.cy;
     return connectPath(startX, startY, endX, endY);
   };
   return (
