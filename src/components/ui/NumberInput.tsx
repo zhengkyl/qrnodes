@@ -17,7 +17,7 @@ export function NumberInput(props: Props) {
       class="min-w-48 w-full relative rounded-md bg-back-subtle focus-within:(ring-2 ring-fore-base ring-offset-2 ring-offset-back-base)"
       minValue={props.min}
       maxValue={props.max}
-      step={1}
+      step={props.step}
       rawValue={props.value}
       onRawValueChange={(v) => {
         if (Number.isNaN(v)) return;

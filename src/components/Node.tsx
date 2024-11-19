@@ -9,7 +9,6 @@ import {
 import { NumberInput } from "./ui/NumberInput";
 import { ResizingTextInput, TextInput } from "./ui/TextInput";
 import { Select } from "./ui/Select";
-import { unwrap } from "solid-js/store";
 import { equal } from "../util/path";
 
 type NodeProps = NodeCommon;
@@ -308,7 +307,6 @@ export function Node(props: NodeProps) {
           }
         });
       }
-      inputs[key] = unwrap(inputs[key]);
     });
     const output = props.function(inputs);
     setNodes(props.id, "output", "field", "value", output);

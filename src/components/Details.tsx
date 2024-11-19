@@ -17,8 +17,8 @@ export function Details() {
 const TypedArray = Object.getPrototypeOf(Uint8Array);
 
 const prettyOutput = (output) => {
-  if (output.type === "display") return output.value;
-  return prettyPrint(unwrap(output.value));
+  if (output.type === "display") return output.field.value;
+  return prettyPrint(unwrap(output.field.value));
 };
 
 const prettyPrint = (arg) => {

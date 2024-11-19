@@ -2,7 +2,7 @@ import { baseToNode } from "../context/NodesContext";
 import { generate, QrOptions, Version } from "fuqr";
 import { toHtml } from "hast-util-to-html";
 import { s } from "hastscript";
-import { filterNode } from "./filters";
+import { filterNode, gaussianBlurNode } from "./filters";
 
 export function textNode({ x, y }) {
   return baseToNode({
@@ -200,4 +200,5 @@ export const NODE_MAP = {
   Renderer: renderNode,
   Display: displayNode,
   Filter: filterNode,
+  "Gaussian Blur": gaussianBlurNode,
 };
