@@ -74,6 +74,7 @@ export function baseToNode<T extends InputsBase>(
     value: values.length ? null : node.function({}),
     cx: 0,
     cy: 0,
+    ref: null!,
   };
 
   node.id = 0;
@@ -124,6 +125,7 @@ type Field = {
   value: any; // depends on type
   cx: number; // relative to node
   cy: number; // relative to node
+  ref: HTMLDivElement;
 };
 export type InputField = Field & {
   from: number | null;

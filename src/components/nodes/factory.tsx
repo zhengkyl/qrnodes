@@ -2,7 +2,7 @@ import { baseToNode } from "../context/NodesContext";
 import { generate, QrOptions, Version } from "fuqr";
 import { toHtml } from "hast-util-to-html";
 import { s } from "hastscript";
-import { feTurbulenceNode } from "./filters";
+import { filterNode } from "./filters";
 
 export function textNode({ x, y }) {
   return baseToNode({
@@ -199,5 +199,5 @@ export const NODE_MAP = {
   "QR Code": fuqrNode,
   Renderer: renderNode,
   Display: displayNode,
-  Turbulence: feTurbulenceNode,
+  Filter: filterNode,
 };

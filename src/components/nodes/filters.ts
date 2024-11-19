@@ -1,7 +1,7 @@
 import { s } from "hastscript";
 import { baseToNode } from "../context/NodesContext";
 
-export function feTurbulenceNode({ x, y }) {
+export function filterNode({ x, y }) {
   return baseToNode({
     x,
     y,
@@ -17,13 +17,10 @@ export function feTurbulenceNode({ x, y }) {
         ],
       },
       filterEffects: {
-        type: "fuqr",
+        type: "number",
         label: "Filter effects",
         array: true,
         fields: [
-          {
-            value: null,
-          },
           {
             value: null,
           },

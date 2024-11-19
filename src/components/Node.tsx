@@ -1,7 +1,11 @@
 import { batch, For, Match, onMount, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useCanvasContext } from "./Canvas";
-import { useNodesContext, type NodeCommon } from "./context/NodesContext";
+import {
+  useNodesContext,
+  type InputField,
+  type NodeCommon,
+} from "./context/NodesContext";
 import { NumberInput } from "./ui/NumberInput";
 import { ResizingTextInput, TextInput } from "./ui/TextInput";
 import { Select } from "./ui/Select";
@@ -45,14 +49,14 @@ export function Node(props: NodeProps) {
 
         setNodes(props.id, { width, height });
 
-        Object.entries(props.inputs).forEach(([key, input], i) => {
+        Object.entries(props.inputs).forEach(([key, input]) => {
           for (let j = 0; j < input.fields.length; j++) {
-            updateHandlePos(inputHandles[i][j], ["inputs", key, "fields", j]);
+            updateHandlePos(input.fields[j].ref, ["inputs", key, "fields", j]);
           }
         });
 
-        if (outputHandle != null) {
-          updateHandlePos(outputHandle, ["output", "field"]);
+        if (props.output.field.ref != null) {
+          updateHandlePos(props.output.field.ref, ["output", "field"]);
         }
       }
     });
@@ -61,8 +65,6 @@ export function Node(props: NodeProps) {
   });
 
   let nodeRef: HTMLDivElement;
-  const inputHandles: HTMLDivElement[][] = [];
-  let outputHandle: HTMLDivElement;
 
   const onPointerDownTail = (
     fromId: number,
@@ -93,8 +95,9 @@ export function Node(props: NodeProps) {
       });
     });
 
+    let toPath: InputPathKey | null = null;
+    let delToPath: InputPathKey | null = oldToPath;
     const onMoveTail = (e: PointerEvent) => {
-      let toPath: InputPathKey | null = null;
       const coords = toCanvasCoords(e.clientX, e.clientY);
       setHandleCoords(coords);
       const overlaps: {
@@ -138,6 +141,10 @@ export function Node(props: NodeProps) {
           "from",
           fromId
         );
+        const input = nodes[toPath[0]]!.inputs[toPath[1]];
+        if (input.array && toPath[2] === input.fields.length - 1) {
+          setNodes(toPath[0], "inputs", toPath[1], "fields", toPath[2] + 1, {});
+        }
       } else {
         if (toPath == null) return;
         setGhostTail(null);
@@ -150,6 +157,7 @@ export function Node(props: NodeProps) {
           "from",
           null
         );
+        delToPath = toPath;
         toPath = null;
       }
     };
@@ -160,6 +168,19 @@ export function Node(props: NodeProps) {
       batch(() => {
         setGhostHead(null);
         setGhostTail(null);
+
+        if (toPath == null && delToPath != null) {
+          const input = nodes[delToPath[0]]!.inputs[delToPath[1]];
+          if (input.array && input.fields.length > 1) {
+            setNodes(
+              delToPath[0],
+              "inputs",
+              delToPath[1],
+              "fields",
+              (prevFields) => prevFields.filter((_, i) => i != delToPath![2])
+            );
+          }
+        }
       });
     };
 
@@ -167,85 +188,102 @@ export function Node(props: NodeProps) {
     document.addEventListener("pointerup", onReleaseTail);
   };
 
-  const onPointerDownHead = (path: InputPathKey, field) => (e) => {
-    e.preventDefault(); // don't trigger img drag
-    e.stopImmediatePropagation();
-    const coords = toCanvasCoords(e.clientX, e.clientY);
-    setHandleCoords(coords);
+  const onPointerDownHead =
+    (input, field: InputField) => (e, path: InputPathKey) => {
+      e.preventDefault(); // don't trigger img drag
+      e.stopImmediatePropagation();
+      const coords = toCanvasCoords(e.clientX, e.clientY);
+      setHandleCoords(coords);
 
-    let fromId = field.from;
-    if (fromId != null) {
-      setGhostHead(fromId);
-      setNodes(path[0], "inputs", path[1], "fields", path[2], "from", null);
-      onPointerDownTail(fromId, path);
-    } else {
-      setGhostTail(path);
+      let fromId = field.from;
+      if (fromId != null) {
+        setGhostHead(fromId);
+        setNodes(path[0], "inputs", path[1], "fields", path[2], "from", null);
+        onPointerDownTail(fromId, path);
+      } else {
+        setGhostTail(path);
 
-      // TODO depth list
-      const validHeadSlots = nodes.filter(
-        (node) =>
-          node != null &&
-          node.id !== props.id &&
-          node.output.type === field.type
-      ) as NodeCommon[];
+        // TODO depth list
+        const validHeadSlots = nodes.filter(
+          (node) =>
+            node != null &&
+            node.id !== props.id &&
+            node.output.type === input.type
+        ) as NodeCommon[];
 
-      const onMoveHead = (e: PointerEvent) => {
-        const coords = toCanvasCoords(e.clientX, e.clientY);
-        setHandleCoords(coords);
+        const onMoveHead = (e: PointerEvent) => {
+          const coords = toCanvasCoords(e.clientX, e.clientY);
+          setHandleCoords(coords);
 
-        const overlaps: { dist: number; id: number }[] = [];
-        validHeadSlots.forEach((node) => {
-          const cx = node.x + node.output.field.cx;
-          const cy = node.y + node.output.field.cy;
+          const overlaps: { dist: number; id: number }[] = [];
+          validHeadSlots.forEach((node) => {
+            const cx = node.x + node.output.field.cx;
+            const cy = node.y + node.output.field.cy;
 
-          const dx = coords.x - cx;
-          const dy = coords.y - cy;
-          const d2 = dx * dx + dy * dy;
-          if (d2 < R_SQUARED) {
-            overlaps.push({ dist: d2, id: node.id });
-          }
-        });
+            const dx = coords.x - cx;
+            const dy = coords.y - cy;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < R_SQUARED) {
+              overlaps.push({ dist: d2, id: node.id });
+            }
+          });
 
-        if (overlaps.length) {
-          for (let i = 1; i < overlaps.length; i++) {
-            if (overlaps[i].dist < overlaps[0].dist) {
-              overlaps[0].dist = overlaps[i].dist;
-              overlaps[0].id = overlaps[i].id;
+          if (overlaps.length) {
+            for (let i = 1; i < overlaps.length; i++) {
+              if (overlaps[i].dist < overlaps[0].dist) {
+                overlaps[0].dist = overlaps[i].dist;
+                overlaps[0].id = overlaps[i].id;
+              }
+            }
+            let newId = overlaps[0].id;
+            if (fromId === newId) return;
+            fromId = newId;
+            setGhostHead(fromId);
+            setNodes(
+              path[0],
+              "inputs",
+              path[1],
+              "fields",
+              path[2],
+              "from",
+              fromId
+            );
+            if (input.array && path[2] === input.fields.length - 1) {
+              setNodes(path[0], "inputs", path[1], "fields", path[2] + 1, {});
+            }
+          } else {
+            if (fromId == null) return;
+            fromId = null;
+            setGhostHead(null);
+            setNodes(
+              path[0],
+              "inputs",
+              path[1],
+              "fields",
+              path[2],
+              "from",
+              null
+            );
+            if (input.array) {
+              setNodes(path[0], "inputs", path[1], "fields", (prevFields) =>
+                prevFields.filter((_, i) => i !== path[2] + 1)
+              );
             }
           }
-          let newId = overlaps[0].id;
-          if (fromId === newId) return;
-          fromId = newId;
-          setGhostHead(fromId);
-          setNodes(
-            path[0],
-            "inputs",
-            path[1],
-            "fields",
-            path[2],
-            "from",
-            fromId
-          );
-        } else {
-          if (fromId == null) return;
-          fromId = null;
-          setGhostHead(null);
-          setNodes(path[0], "inputs", path[1], "fields", path[2], "from", null);
-        }
-      };
-      const onReleaseHead = () => {
-        document.removeEventListener("pointermove", onMoveHead);
-        document.removeEventListener("pointerup", onReleaseHead);
-        batch(() => {
-          setGhostHead(null);
-          setGhostTail(null);
-        });
-      };
+        };
+        const onReleaseHead = () => {
+          document.removeEventListener("pointermove", onMoveHead);
+          document.removeEventListener("pointerup", onReleaseHead);
+          batch(() => {
+            setGhostHead(null);
+            setGhostTail(null);
+          });
+        };
 
-      document.addEventListener("pointermove", onMoveHead);
-      document.addEventListener("pointerup", onReleaseHead);
-    }
-  };
+        document.addEventListener("pointermove", onMoveHead);
+        document.addEventListener("pointerup", onReleaseHead);
+      }
+    };
 
   const outputValue = () => {
     const inputs = {};
@@ -253,6 +291,8 @@ export function Node(props: NodeProps) {
       if (input.array) {
         inputs[key] = [];
         input.fields.forEach((field, j) => {
+          // always one extra field to allow appending
+          if (j === input.fields.length - 1) return;
           if (field.from != null) {
             inputs[key][j] = nodes[field.from]!.output.field.value;
           } else {
@@ -270,7 +310,6 @@ export function Node(props: NodeProps) {
       }
       inputs[key] = unwrap(inputs[key]);
     });
-    console.log(inputs);
     const output = props.function(inputs);
     setNodes(props.id, "output", "field", "value", output);
 
@@ -311,25 +350,36 @@ export function Node(props: NodeProps) {
           stroke-width={2 / canvasScale()}
         />
       </svg>
-      <div class="flex flex-col gap-4">
-        <div class="select-none font-bold leading-none">{props.title}</div>
+      <div class="flex flex-col gap-2">
+        <div class="select-none font-bold leading-none pb-2">{props.title}</div>
         <For each={Object.entries(props.inputs)}>
-          {([key, input], i) => {
-            inputHandles[i()] = [];
+          {([key, input]) => {
             return (
               <div>
-                <div class="select-none text-sm">{input.label}</div>
+                <div class="select-none text-sm leading-none pb-1">
+                  {input.label}
+                </div>
                 <For each={input.fields}>
                   {(field, j) => {
+                    const onPointerDown = onPointerDownHead(input, field);
                     return (
-                      <div class="flex items-center">
+                      <div class="flex items-center pb-2">
                         <div
-                          ref={inputHandles[i()][j()]}
+                          ref={(ref) => {
+                            setNodes(
+                              props.id,
+                              "inputs",
+                              key,
+                              "fields",
+                              j(),
+                              "ref",
+                              ref
+                            );
+                          }}
                           class="absolute -left-4 w-8 h-8"
-                          onPointerDown={onPointerDownHead(
-                            [props.id, key, j()],
-                            field
-                          )}
+                          onPointerDown={(e) => {
+                            onPointerDown(e, [props.id, key, j()]);
+                          }}
                         >
                           <div class="border rounded-full bg-back-subtle m-2 w-4 h-4"></div>
                         </div>
@@ -340,20 +390,34 @@ export function Node(props: NodeProps) {
                               ? nodes[field.from!]!.output.field.value
                               : field.value
                           }
-                          disabled={field.from != null}
+                          disabled={input.array || field.from != null}
                           onValue={
                             field.from != null
                               ? null
                               : (v) => {
+                                  const fi = j();
                                   setNodes(
                                     props.id,
                                     "inputs",
                                     key,
                                     "fields",
-                                    j(),
+                                    fi,
                                     "value",
                                     v
                                   );
+                                  if (
+                                    input.array &&
+                                    fi === input.fields.length - 1
+                                  ) {
+                                    setNodes(
+                                      props.id,
+                                      "inputs",
+                                      key,
+                                      "fields",
+                                      fi + 1,
+                                      {}
+                                    );
+                                  }
                                 }
                           }
                           {...input.props}
@@ -367,11 +431,15 @@ export function Node(props: NodeProps) {
           }}
         </For>
         <div>
-          <div class="select-none text-sm">{props.output.label}</div>
+          <div class="select-none text-sm leading-none pb-1">
+            {props.output.label}
+          </div>
           <div class="flex items-center">
             <Show when={props.output.type !== "display"}>
               <div
-                ref={outputHandle!}
+                ref={(ref) => {
+                  setNodes(props.id, "output", "field", "ref", ref);
+                }}
                 class="absolute -right-4 w-8 h-8"
                 onPointerDown={(e) => {
                   e.preventDefault(); // don't trigger img drag
