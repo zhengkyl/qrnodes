@@ -23,7 +23,6 @@ export function Node(props: NodeProps) {
     setHandleCoords,
     setGhostHead,
     setGhostTail,
-    preview,
   } = useCanvasContext();
   const { nodes, setNodes, activeIds } = useNodesContext();
 
@@ -301,10 +300,6 @@ export function Node(props: NodeProps) {
       produce((o) => (o.value = output))
     );
 
-    if (nodeDef.outputDef.type === "display") {
-      if (output == null) return null;
-      preview().innerHTML = output;
-    }
     return output;
   };
 

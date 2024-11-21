@@ -25,7 +25,6 @@ export const CanvasContext = createContext<{
   setHandleCoords: Setter<{ x: number; y: number } | null>;
   setGhostHead: Setter<number | null>;
   setGhostTail: Setter<InputPathKey | null>;
-  preview: Accessor<HTMLDivElement>;
 }>();
 
 const BEZIER_HANDLE = 8;
@@ -437,7 +436,6 @@ export function Canvas(props) {
     >
       <CanvasContext.Provider
         value={{
-          preview: props.preview,
           canvasScale,
           toCanvasCoords,
           setHandleCoords,
@@ -445,7 +443,7 @@ export function Canvas(props) {
           setGhostTail,
         }}
       >
-        <Toolbox parentDiv={parentDiv!} />
+        <Toolbox parentDiv={parentDiv!} setActiveBox={setActiveBox} />
         <div
           class="absolute"
           style={{
@@ -625,7 +623,7 @@ function Toolbox(props) {
         });
         const id = addNode(node);
         setActiveIds([id]);
-        // setActiveBox(null); TODO make it computed based on active ids
+        props.setActiveBox(null); // TODO make it computed based on active ids
         setOverToolbox(true);
       }
       setBabyPos(null);
