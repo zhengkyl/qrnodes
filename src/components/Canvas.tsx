@@ -458,10 +458,10 @@ export function Canvas(props) {
                   const node = _node();
                   return (
                     <Index each={Object.values(node.inputs)}>
-                      {(_input) => {
-                        const input = _input();
+                      {(input) => {
+                        // filter() creates a new array, so must use signal
                         return (
-                          <For each={input}>
+                          <For each={input()}>
                             {(field) => (
                               <Show when={field.from != null}>
                                 <PlacedConnectorTail
@@ -578,7 +578,12 @@ export function Canvas(props) {
 
 const INPUT_KEYS: (keyof typeof NODE_DEFS)[] = ["text", "number", "qrCode"];
 const RENDER_KEYS: (keyof typeof NODE_DEFS)[] = ["render", "display"];
-const FILTER_KEYS: (keyof typeof NODE_DEFS)[] = ["filter", "gaussianBlur"];
+const FILTER_KEYS: (keyof typeof NODE_DEFS)[] = [
+  "filter",
+  "gaussianBlur",
+  "turbulence",
+  "displacementMap",
+];
 
 function Toolbox(props) {
   const { addNode, setActiveIds } = useNodesContext();

@@ -35,12 +35,21 @@ export function NodesContextProvider(props: { children: JSX.Element }) {
     batch(() => {
       nodes.forEach((node) => {
         if (node == null) return;
+        const inputDefs = NODE_DEFS[node.key].inputDefs;
         Object.entries(node.inputs).forEach(([key, input]) => {
+          const removed: number[] = [];
           input.forEach((field, j) => {
             if (field.from != null && ids.includes(field.from)) {
               setNodes(node.id, "inputs", key, j, "from", null);
+              removed.push(j);
             }
           });
+
+          if (removed.length && inputDefs[key].array) {
+            setNodes(node.id, "inputs", key, (prevFields) =>
+              prevFields.filter((_, i) => !removed.includes(i))
+            );
+          }
         });
       });
       ids.forEach((id) => {

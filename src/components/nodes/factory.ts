@@ -1,4 +1,9 @@
-import { FilterNode, GaussianBlurNode } from "./filter";
+import {
+  DisplacementMapNode,
+  FilterNode,
+  GaussianBlurNode,
+  TurbulenceNode,
+} from "./filter";
 import { TextNode, NumberNode, QrNode } from "./input";
 import { DisplayNode, RenderNode } from "./render";
 import type { NodeInfo } from "./shared";
@@ -11,6 +16,8 @@ export const NODE_DEFS = {
   display: DisplayNode,
   filter: FilterNode,
   gaussianBlur: GaussianBlurNode,
+  turbulence: TurbulenceNode,
+  displacementMap: DisplacementMapNode,
 };
 
 export const NODE_CONSTRUCTORS: {
@@ -105,7 +112,39 @@ export const NODE_CONSTRUCTORS: {
         edgeMode: [{ value: "duplicate" }],
       },
       output: {
-        value: undefined,
+        value: null,
+      },
+    }),
+  turbulence: ({ x, y }) =>
+    createNode({
+      x,
+      y,
+      key: "turbulence",
+      inputs: {
+        type: [{ value: "turbulence" }],
+        baseFrequency: [{ value: 0.2 }],
+        numOctaves: [{ value: 1 }],
+        seed: [{ value: 0 }],
+        stitchTiles: [{ value: "noStitch" }],
+      },
+      output: {
+        value: null,
+      },
+    }),
+  displacementMap: ({ x, y }) =>
+    createNode({
+      x,
+      y,
+      key: "displacementMap",
+      inputs: {
+        in: [{ value: "SourceGraphic" }],
+        in2: [{ value: "" }],
+        scale: [{ value: 1.5 }],
+        xChannelSelector: [{ value: "A" }],
+        yChannelSelector: [{ value: "A" }],
+      },
+      output: {
+        value: null,
       },
     }),
 };

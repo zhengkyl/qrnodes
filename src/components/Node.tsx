@@ -144,7 +144,9 @@ export function Node(props: NodeProps) {
         const input = toNode.inputs[toPath[1]];
         const inputDef = NODE_DEFS[toNode.key].inputDefs[toPath[1]];
         if (inputDef.array && toPath[2] === input.length - 1) {
-          setNodes(toPath[0], "inputs", toPath[1], toPath[2] + 1, {});
+          setNodes(toPath[0], "inputs", toPath[1], toPath[2] + 1, {
+            value: null,
+          });
         }
       } else {
         if (toPath == null) return;
@@ -168,7 +170,7 @@ export function Node(props: NodeProps) {
           const inputDef = NODE_DEFS[delNode.key].inputDefs[delToPath[1]];
           if (inputDef.array && input.length > 1) {
             setNodes(delToPath[0], "inputs", delToPath[1], (prevFields) =>
-              prevFields.filter((_, i) => i != delToPath![2])
+              prevFields.filter((_, i) => i !== delToPath![2])
             );
           }
         }
@@ -232,7 +234,9 @@ export function Node(props: NodeProps) {
             setGhostHead(fromId);
             setNodes(path[0], "inputs", path[1], path[2], "from", fromId);
             if (inputDef.array && path[2] === input.length - 1) {
-              setNodes(path[0], "inputs", path[1], path[2] + 1, {});
+              setNodes(path[0], "inputs", path[1], path[2] + 1, {
+                value: null,
+              });
             }
           } else {
             if (fromId == null) return;

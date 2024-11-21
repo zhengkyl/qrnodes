@@ -51,7 +51,6 @@ export const GaussianBlurNode = {
     stdDeviation: {
       type: "number",
       label: "stdDeviation",
-
       props: {
         step: 0.1,
       },
@@ -70,5 +69,89 @@ export const GaussianBlurNode = {
   },
   function: (inputs) => {
     return s("feGaussianBlur", inputs);
+  },
+} satisfies NodeDef;
+
+export const TurbulenceNode = {
+  title: "Turbulence",
+  inputDefs: {
+    type: {
+      type: "select",
+      label: "Type",
+      props: {
+        options: ["turbulence", "fractalNoise"],
+      },
+    },
+    baseFrequency: {
+      type: "number",
+      label: "baseFrequency",
+      props: {
+        step: 0.01,
+      },
+    },
+    numOctaves: {
+      type: "number",
+      label: "numOctaves",
+    },
+    seed: {
+      type: "number",
+      label: "seed",
+    },
+    stitchTiles: {
+      type: "select",
+      label: "stitchTiles",
+      props: {
+        options: ["noStitch", "stitch"],
+      },
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+  },
+  function: (inputs) => {
+    return s("feTurbulence", inputs);
+  },
+} satisfies NodeDef;
+
+export const DisplacementMapNode = {
+  title: "DisplacementMap",
+  inputDefs: {
+    in: {
+      type: "string",
+      label: "in",
+    },
+    in2: {
+      type: "string",
+      label: "in2",
+    },
+    scale: {
+      type: "number",
+      label: "scale",
+      props: {
+        step: 0.1,
+      },
+    },
+    xChannelSelector: {
+      type: "select",
+      label: "xChannelSelector",
+      props: {
+        options: ["R", "G", "B", "A"],
+      },
+    },
+    yChannelSelector: {
+      type: "select",
+      label: "yChannelSelector",
+      props: {
+        options: ["R", "G", "B", "A"],
+      },
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+  },
+  function: (inputs) => {
+    return s("feDisplacementMap", inputs);
   },
 } satisfies NodeDef;
