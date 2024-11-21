@@ -1,17 +1,16 @@
-import { batch, For, Match, onMount, Show, Switch } from "solid-js";
+import { batch, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useCanvasContext } from "./Canvas";
-import {
-  useNodesContext,
-  type InputField,
-  type NodeCommon,
-} from "./context/NodesContext";
+import { useNodesContext } from "./context/NodesContext";
 import { NumberInput } from "./ui/NumberInput";
 import { ResizingTextInput, TextInput } from "./ui/TextInput";
 import { Select } from "./ui/Select";
 import { equal } from "../util/path";
+import { produce, unwrap } from "solid-js/store";
+import type { NodeDef, NodeInfo } from "./nodes/shared";
+import { NODE_DEFS } from "./nodes/factory";
 
-type NodeProps = NodeCommon;
+type NodeProps = NodeInfo;
 
 const R_SQUARED = 20 * 20;
 
@@ -28,6 +27,9 @@ export function Node(props: NodeProps) {
   } = useCanvasContext();
   const { nodes, setNodes, activeIds } = useNodesContext();
 
+  const nodeDef = NODE_DEFS[props.key] as NodeDef;
+
+  let observer;
   onMount(() => {
     const updateHandlePos = (ref, partialPath) => {
       const handle = ref.getBoundingClientRect();
@@ -41,7 +43,7 @@ export function Node(props: NodeProps) {
         cy: y - props.y,
       });
     };
-    const observer = new ResizeObserver((entries) => {
+    observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const width = entry.borderBoxSize[0].inlineSize;
         const height = entry.borderBoxSize[0].blockSize;
@@ -49,18 +51,24 @@ export function Node(props: NodeProps) {
         setNodes(props.id, { width, height });
 
         Object.entries(props.inputs).forEach(([key, input]) => {
-          for (let j = 0; j < input.fields.length; j++) {
-            updateHandlePos(input.fields[j].ref, ["inputs", key, "fields", j]);
+          for (let j = 0; j < input.length; j++) {
+            updateHandlePos(input[j].ref, ["inputs", key, j]);
           }
         });
 
-        if (props.output.field.ref != null) {
-          updateHandlePos(props.output.field.ref, ["output", "field"]);
+        if (props.output.ref != null) {
+          updateHandlePos(props.output.ref, ["output"]);
         }
       }
     });
-
     observer.observe(nodeRef);
+    console.log("onMount", props.id);
+  });
+  onCleanup(() => {
+    console.log("onCleanup", props.id);
+    if (observer != null) {
+      observer.unobserve(nodeRef);
+    }
   });
 
   let nodeRef: HTMLDivElement;
@@ -69,7 +77,7 @@ export function Node(props: NodeProps) {
     fromId: number,
     oldToPath: InputPathKey | null
   ) => {
-    const validType = nodes[fromId]!.output.type;
+    const validType = NODE_DEFS[nodes[fromId]!.key].outputDef.type;
     const validInputs: {
       cx: number;
       cy: number;
@@ -79,11 +87,11 @@ export function Node(props: NodeProps) {
     nodes.forEach((node) => {
       if (node == null) return;
       if (node.id == fromId) return;
+      const inputDefs = NODE_DEFS[nodes[node.id]!.key].inputDefs;
       const entries = Object.entries(node.inputs);
-
       entries.forEach(([key, input]) => {
-        if (input.type !== validType) return;
-        input.fields.forEach((field, j) => {
+        if (inputDefs[key].type !== validType) return;
+        input.forEach((field, j) => {
           if (field.from != null) return;
           validInputs.push({
             cx: node.x + field.cx,
@@ -131,31 +139,17 @@ export function Node(props: NodeProps) {
         }
         toPath = newPath;
         setGhostTail(toPath);
-        setNodes(
-          toPath[0],
-          "inputs",
-          toPath[1],
-          "fields",
-          toPath[2],
-          "from",
-          fromId
-        );
-        const input = nodes[toPath[0]]!.inputs[toPath[1]];
-        if (input.array && toPath[2] === input.fields.length - 1) {
-          setNodes(toPath[0], "inputs", toPath[1], "fields", toPath[2] + 1, {});
+        setNodes(toPath[0], "inputs", toPath[1], toPath[2], "from", fromId);
+        const toNode = nodes[toPath[0]]!;
+        const input = toNode.inputs[toPath[1]];
+        const inputDef = NODE_DEFS[toNode.key].inputDefs[toPath[1]];
+        if (inputDef.array && toPath[2] === input.length - 1) {
+          setNodes(toPath[0], "inputs", toPath[1], toPath[2] + 1, {});
         }
       } else {
         if (toPath == null) return;
         setGhostTail(null);
-        setNodes(
-          toPath[0],
-          "inputs",
-          toPath[1],
-          "fields",
-          toPath[2],
-          "from",
-          null
-        );
+        setNodes(toPath[0], "inputs", toPath[1], toPath[2], "from", null);
         delToPath = toPath;
         toPath = null;
       }
@@ -169,14 +163,12 @@ export function Node(props: NodeProps) {
         setGhostTail(null);
 
         if (toPath == null && delToPath != null) {
-          const input = nodes[delToPath[0]]!.inputs[delToPath[1]];
-          if (input.array && input.fields.length > 1) {
-            setNodes(
-              delToPath[0],
-              "inputs",
-              delToPath[1],
-              "fields",
-              (prevFields) => prevFields.filter((_, i) => i != delToPath![2])
+          const delNode = nodes[delToPath[0]]!;
+          const input = delNode.inputs[delToPath[1]];
+          const inputDef = NODE_DEFS[delNode.key].inputDefs[delToPath[1]];
+          if (inputDef.array && input.length > 1) {
+            setNodes(delToPath[0], "inputs", delToPath[1], (prevFields) =>
+              prevFields.filter((_, i) => i != delToPath![2])
             );
           }
         }
@@ -188,7 +180,7 @@ export function Node(props: NodeProps) {
   };
 
   const onPointerDownHead =
-    (input, field: InputField) => (e, path: InputPathKey) => {
+    (input, field, inputDef) => (e, path: InputPathKey) => {
       e.preventDefault(); // don't trigger img drag
       e.stopImmediatePropagation();
       const coords = toCanvasCoords(e.clientX, e.clientY);
@@ -197,7 +189,7 @@ export function Node(props: NodeProps) {
       let fromId = field.from;
       if (fromId != null) {
         setGhostHead(fromId);
-        setNodes(path[0], "inputs", path[1], "fields", path[2], "from", null);
+        setNodes(path[0], "inputs", path[1], path[2], "from", null);
         onPointerDownTail(fromId, path);
       } else {
         setGhostTail(path);
@@ -207,8 +199,8 @@ export function Node(props: NodeProps) {
           (node) =>
             node != null &&
             node.id !== props.id &&
-            node.output.type === input.type
-        ) as NodeCommon[];
+            NODE_DEFS[node.key].outputDef.type === inputDef.type
+        ) as NodeInfo[];
 
         const onMoveHead = (e: PointerEvent) => {
           const coords = toCanvasCoords(e.clientX, e.clientY);
@@ -216,8 +208,8 @@ export function Node(props: NodeProps) {
 
           const overlaps: { dist: number; id: number }[] = [];
           validHeadSlots.forEach((node) => {
-            const cx = node.x + node.output.field.cx;
-            const cy = node.y + node.output.field.cy;
+            const cx = node.x + node.output.cx;
+            const cy = node.y + node.output.cy;
 
             const dx = coords.x - cx;
             const dy = coords.y - cy;
@@ -238,33 +230,17 @@ export function Node(props: NodeProps) {
             if (fromId === newId) return;
             fromId = newId;
             setGhostHead(fromId);
-            setNodes(
-              path[0],
-              "inputs",
-              path[1],
-              "fields",
-              path[2],
-              "from",
-              fromId
-            );
-            if (input.array && path[2] === input.fields.length - 1) {
-              setNodes(path[0], "inputs", path[1], "fields", path[2] + 1, {});
+            setNodes(path[0], "inputs", path[1], path[2], "from", fromId);
+            if (inputDef.array && path[2] === input.length - 1) {
+              setNodes(path[0], "inputs", path[1], path[2] + 1, {});
             }
           } else {
             if (fromId == null) return;
             fromId = null;
             setGhostHead(null);
-            setNodes(
-              path[0],
-              "inputs",
-              path[1],
-              "fields",
-              path[2],
-              "from",
-              null
-            );
-            if (input.array) {
-              setNodes(path[0], "inputs", path[1], "fields", (prevFields) =>
+            setNodes(path[0], "inputs", path[1], path[2], "from", null);
+            if (inputDef.array) {
+              setNodes(path[0], "inputs", path[1], (prevFields) =>
                 prevFields.filter((_, i) => i !== path[2] + 1)
               );
             }
@@ -286,32 +262,45 @@ export function Node(props: NodeProps) {
 
   const outputValue = () => {
     const inputs = {};
+    const unwrapNodes = unwrap(nodes);
+
+    // TODO tracking doesn't work for objects that aren't set with produce
+    // there aren't any nodes like that, but keep an eye out
     Object.entries(props.inputs).forEach(([key, input]) => {
-      if (input.array) {
+      const inputDef = nodeDef.inputDefs[key];
+      if (inputDef.array) {
         inputs[key] = [];
-        input.fields.forEach((field, j) => {
+        input.forEach((field, j) => {
           // always one extra field to allow appending
-          if (j === input.fields.length - 1) return;
+          if (j === input.length - 1) return;
           if (field.from != null) {
-            inputs[key][j] = nodes[field.from]!.output.field.value;
+            inputs[key][j] = unwrapNodes[field.from]!.output.value;
+            nodes[field.from]!.output.value;
           } else {
-            inputs[key][j] = field.value;
+            inputs[key][j] = unwrapNodes[props.id]!.inputs[key][j].value;
+            field.value;
           }
         });
       } else {
-        input.fields.forEach((field) => {
+        input.forEach((field, j) => {
           if (field.from != null) {
-            inputs[key] = nodes[field.from]!.output.field.value;
+            inputs[key] = unwrapNodes[field.from]!.output.value;
+            nodes[field.from]!.output.value;
           } else {
-            inputs[key] = field.value;
+            inputs[key] = unwrapNodes[props.id]!.inputs[key][j].value;
+            field.value;
           }
         });
       }
     });
-    const output = props.function(inputs);
-    setNodes(props.id, "output", "field", "value", output);
+    const output = nodeDef.function(inputs);
+    setNodes(
+      props.id,
+      "output",
+      produce((o) => (o.value = output))
+    );
 
-    if (props.output.type === "display") {
+    if (nodeDef.outputDef.type === "display") {
       if (output == null) return null;
       preview().innerHTML = output;
     }
@@ -349,30 +338,29 @@ export function Node(props: NodeProps) {
         />
       </svg>
       <div class="flex flex-col gap-2">
-        <div class="select-none font-bold leading-none pb-2">{props.title}</div>
+        <div class="select-none font-bold leading-none pb-2">
+          {nodeDef.title}
+        </div>
         <For each={Object.entries(props.inputs)}>
           {([key, input]) => {
+            const inputDef = nodeDef.inputDefs[key];
             return (
               <div>
                 <div class="select-none text-sm leading-none pb-1">
-                  {input.label}
+                  {inputDef.label}
                 </div>
-                <For each={input.fields}>
+                <For each={input}>
                   {(field, j) => {
-                    const onPointerDown = onPointerDownHead(input, field);
+                    const onPointerDown = onPointerDownHead(
+                      input,
+                      field,
+                      inputDef
+                    );
                     return (
                       <div class="flex items-center pb-2">
                         <div
                           ref={(ref) => {
-                            setNodes(
-                              props.id,
-                              "inputs",
-                              key,
-                              "fields",
-                              j(),
-                              "ref",
-                              ref
-                            );
+                            setNodes(props.id, "inputs", key, j(), "ref", ref);
                           }}
                           class="absolute -left-4 w-8 h-8"
                           onPointerDown={(e) => {
@@ -382,13 +370,13 @@ export function Node(props: NodeProps) {
                           <div class="border rounded-full bg-back-subtle m-2 w-4 h-4"></div>
                         </div>
                         <Dynamic
-                          component={INPUT_MAP[input.type] ?? TextInput}
+                          component={INPUT_MAP[inputDef.type] ?? TextInput}
                           value={
                             field.from != null
-                              ? nodes[field.from!]!.output.field.value
+                              ? nodes[field.from!]!.output.value
                               : field.value
                           }
-                          disabled={input.array || field.from != null}
+                          disabled={inputDef.array || field.from != null}
                           onValue={
                             field.from != null
                               ? null
@@ -398,27 +386,25 @@ export function Node(props: NodeProps) {
                                     props.id,
                                     "inputs",
                                     key,
-                                    "fields",
                                     fi,
                                     "value",
                                     v
                                   );
                                   if (
-                                    input.array &&
-                                    fi === input.fields.length - 1
+                                    inputDef.array &&
+                                    fi === input.length - 1
                                   ) {
                                     setNodes(
                                       props.id,
                                       "inputs",
                                       key,
-                                      "fields",
                                       fi + 1,
                                       {}
                                     );
                                   }
                                 }
                           }
-                          {...input.props}
+                          {...inputDef.props}
                         />
                       </div>
                     );
@@ -430,13 +416,13 @@ export function Node(props: NodeProps) {
         </For>
         <div>
           <div class="select-none text-sm leading-none pb-1">
-            {props.output.label}
+            {nodeDef.outputDef.label}
           </div>
           <div class="flex items-center">
-            <Show when={props.output.type !== "display"}>
+            <Show when={nodeDef.outputDef.type !== "display"}>
               <div
                 ref={(ref) => {
-                  setNodes(props.id, "output", "field", "ref", ref);
+                  setNodes(props.id, "output", "ref", ref);
                 }}
                 class="absolute -right-4 w-8 h-8"
                 onPointerDown={(e) => {
@@ -456,17 +442,17 @@ export function Node(props: NodeProps) {
               when={Object.keys(props.inputs).length}
               fallback={
                 <Dynamic
-                  component={INPUT_MAP[props.output.type]}
-                  value={props.output.field.value}
+                  component={INPUT_MAP[nodeDef.outputDef.type]}
+                  value={props.output.value}
                   onValue={(v) => {
-                    setNodes(props.id, "output", "field", "value", v);
+                    setNodes(props.id, "output", "value", v);
                   }}
-                  {...props.output.props}
+                  {...nodeDef.outputDef.props}
                 />
               }
             >
               <Switch fallback={<TextInput value={outputValue()} disabled />}>
-                <Match when={props.output.type === "display"}>
+                <Match when={nodeDef.outputDef.type === "display"}>
                   <DisplayOutput output={outputValue()} />
                 </Match>
               </Switch>

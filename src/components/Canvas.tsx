@@ -8,14 +8,11 @@ import {
   type Accessor,
   type Setter,
 } from "solid-js";
-import {
-  useNodesContext,
-  type InputField,
-  type NodeCommon,
-} from "./context/NodesContext";
+import { useNodesContext } from "./context/NodesContext";
 import { Node, type InputPathKey } from "./Node";
-import { NODE_MAP } from "./nodes/factory";
 import { containsPoint } from "../util/rect";
+import type { NodeInfo } from "./nodes/shared";
+import { NODE_CONSTRUCTORS, NODE_DEFS } from "./nodes/factory";
 
 export type Coords = {
   x: number;
@@ -29,16 +26,6 @@ export const CanvasContext = createContext<{
   setGhostHead: Setter<number | null>;
   setGhostTail: Setter<InputPathKey | null>;
   preview: Accessor<HTMLDivElement>;
-  // setCanvasScale: Setter<number>;
-  // canvasOffset: Accessor<{ x: number; y: number }>;
-  // // onPanMove: () => void;
-  // // onPanRelease: () => void;
-  // panning: Accessor<boolean>;
-  // dragging: Accessor<boolean>;
-  // setDragging: Setter<boolean>;
-  // onPanStart: (e: PointerEvent) => void;
-  // onZoom: (e: WheelEvent) => void;
-  // onScroll: (e: WheelEvent) => void;
 }>();
 
 const BEZIER_HANDLE = 8;
@@ -164,9 +151,7 @@ export function Canvas(props) {
     prevT = now;
   };
 
-  /////////////////////
-
-  const { nodes, addNode, removeNode, setNodes, activeIds, setActiveIds } =
+  const { nodes, removeNode, setNodes, activeIds, setActiveIds } =
     useNodesContext();
 
   let selectStartX;
@@ -342,14 +327,6 @@ export function Canvas(props) {
     y: number;
   } | null>(null);
 
-  let toolbox: HTMLDivElement;
-
-  const [babyPos, setBabyPos] = createSignal<Coords | null>(null);
-  const [overToolbox, setOverToolbox] = createSignal(false);
-  let babyText;
-  let babyOffsetX;
-  let babyOffsetY;
-
   document.addEventListener("keydown", (e) => {
     switch (e.key) {
       case "Delete":
@@ -458,81 +435,6 @@ export function Canvas(props) {
         e.stopImmediatePropagation();
       }}
     >
-      <div
-        ref={toolbox!}
-        class="absolute bg-back-subtle border flex flex-col gap-1 p-2 m-2 z-50"
-        onPointerDown={(e) => {
-          e.stopImmediatePropagation();
-        }}
-      >
-        <div class="select-none leading-none font-bold pb-2">Toolbox</div>
-        <For each={Object.keys(NODE_MAP)}>
-          {(val) => {
-            return (
-              <div
-                class="p-4 border"
-                onPointerDown={(e) => {
-                  babyOffsetX = e.offsetX;
-                  babyOffsetY = e.offsetY;
-
-                  const onMove = (e) => {
-                    setBabyPos({
-                      x: e.clientX - babyOffsetX,
-                      y: e.clientY - babyOffsetY,
-                    });
-                    setOverToolbox(toolbox.contains(e.target));
-                  };
-                  const onRelease = (e) => {
-                    document.removeEventListener("pointermove", onMove);
-                    document.removeEventListener("pointerup", onRelease);
-
-                    const rect = parentDiv.getBoundingClientRect();
-                    const toolRect = toolbox.getBoundingClientRect();
-                    if (
-                      containsPoint(rect, e.clientX, e.clientY) &&
-                      !containsPoint(toolRect, e.clientX, e.clientY)
-                    ) {
-                      const { x, y } = toCanvasCoords(e.clientX, e.clientY);
-
-                      const node = NODE_MAP[val]({
-                        x: x - babyOffsetX,
-                        y: y - babyOffsetY,
-                      });
-                      const id = addNode(node);
-                      setActiveIds([id]);
-                    }
-                    setBabyPos(null);
-                  };
-
-                  babyText = val;
-                  document.addEventListener("pointermove", onMove);
-                  document.addEventListener("pointerup", onRelease);
-                }}
-              >
-                <div class="select-none pointer-events-none leading-none font-bold w-48">
-                  {val}
-                </div>
-              </div>
-            );
-          }}
-        </For>
-        <Show when={babyPos()}>
-          {(pos) => (
-            <div
-              class="fixed top-0 left-0 p-4 border transition-scale"
-              style={{
-                translate: `${pos().x}px ${pos().y}px`,
-                scale: overToolbox() ? 1 : canvasScale(),
-                "transform-origin": `${babyOffsetX}px ${babyOffsetY}px`,
-              }}
-            >
-              <div class="select-none pointer-events-none leading-none font-bold w-48">
-                {babyText}
-              </div>
-            </div>
-          )}
-        </Show>
-      </div>
       <CanvasContext.Provider
         value={{
           preview: props.preview,
@@ -543,6 +445,7 @@ export function Canvas(props) {
           setGhostTail,
         }}
       >
+        <Toolbox parentDiv={parentDiv!} />
         <div
           class="absolute"
           style={{
@@ -560,7 +463,7 @@ export function Canvas(props) {
                       {(_input) => {
                         const input = _input();
                         return (
-                          <For each={input.fields}>
+                          <For each={input}>
                             {(field) => (
                               <Show when={field.from != null}>
                                 <PlacedConnectorTail
@@ -587,14 +490,14 @@ export function Canvas(props) {
                 const headId = ghostHead();
                 if (headId != null) {
                   const node = nodes[headId]!;
-                  startX = node.x + node.output.field.cx + BEZIER_HANDLE;
-                  startY = node.y + node.output.field.cy;
+                  startX = node.x + node.output.cx + BEZIER_HANDLE;
+                  startY = node.y + node.output.cy;
                   endX = otherCoords.x - BEZIER_HANDLE;
                   endY = otherCoords.y;
                 } else {
                   const path = ghostTail()!;
                   const node = nodes[path[0]]!;
-                  const input = node.inputs[path[1]].fields[path[2]];
+                  const input = node.inputs[path[1]][path[2]];
                   endX = node.x + input.cx - BEZIER_HANDLE;
                   endY = node.y + input.cy;
                   startX = otherCoords.x + BEZIER_HANDLE;
@@ -618,8 +521,8 @@ export function Canvas(props) {
                 const node = nodes[ghostHead()!]!;
                 return (
                   <circle
-                    cx={node.x + node.output.field.cx}
-                    cy={node.y + node.output.field.cy}
+                    cx={node.x + node.output.cx}
+                    cy={node.y + node.output.cy}
                     r="7"
                     fill="white"
                   />
@@ -630,7 +533,7 @@ export function Canvas(props) {
               {(_) => {
                 const path = ghostTail()!;
                 const node = nodes[path[0]]!;
-                const input = node.inputs[path[1]].fields[path[2]];
+                const input = node.inputs[path[1]][path[2]];
                 return (
                   <circle
                     cx={node.x + input.cx}
@@ -675,13 +578,139 @@ export function Canvas(props) {
   );
 }
 
-function PlacedConnectorTail(props: { node: NodeCommon; field: InputField }) {
+const INPUT_KEYS: (keyof typeof NODE_DEFS)[] = ["text", "number", "qrCode"];
+const RENDER_KEYS: (keyof typeof NODE_DEFS)[] = ["render", "display"];
+const FILTER_KEYS: (keyof typeof NODE_DEFS)[] = ["filter", "gaussianBlur"];
+
+function Toolbox(props) {
+  const { addNode, setActiveIds } = useNodesContext();
+  const { toCanvasCoords, canvasScale } = useCanvasContext();
+
+  let toolbox: HTMLDivElement;
+
+  const [babyPos, setBabyPos] = createSignal<Coords | null>(null);
+  const [overToolbox, setOverToolbox] = createSignal(true);
+  let babyText;
+  let babyOffsetX;
+  let babyOffsetY;
+
+  const onPointerDownBaby = (key, func) => (e) => {
+    babyOffsetX = e.offsetX;
+    babyOffsetY = e.offsetY;
+
+    const onMove = (e) => {
+      setBabyPos({
+        x: e.clientX - babyOffsetX,
+        y: e.clientY - babyOffsetY,
+      });
+      setOverToolbox(
+        containsPoint(toolbox.getBoundingClientRect(), e.clientX, e.clientY)
+      );
+    };
+    const onRelease = (e) => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onRelease);
+
+      const rect = props.parentDiv.getBoundingClientRect();
+      const toolRect = toolbox.getBoundingClientRect();
+      if (
+        containsPoint(rect, e.clientX, e.clientY) &&
+        !containsPoint(toolRect, e.clientX, e.clientY)
+      ) {
+        const { x, y } = toCanvasCoords(e.clientX, e.clientY);
+
+        const node = func({
+          x: x - babyOffsetX,
+          y: y - babyOffsetY,
+        });
+        const id = addNode(node);
+        setActiveIds([id]);
+        // setActiveBox(null); TODO make it computed based on active ids
+        setOverToolbox(true);
+      }
+      setBabyPos(null);
+    };
+
+    babyText = NODE_DEFS[key].title;
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onRelease);
+  };
+
+  return (
+    <div
+      ref={toolbox!}
+      class="absolute bg-back-subtle border flex flex-col gap-1 p-2 m-2 z-50 select-none"
+      onPointerDown={(e) => {
+        e.stopImmediatePropagation();
+      }}
+    >
+      <div class="leading-none font-bold pb-2">Inputs</div>
+      <For each={INPUT_KEYS}>
+        {(key) => {
+          return (
+            <div
+              class="p-3.5 border leading-none font-bold text-sm w-49"
+              onPointerDown={onPointerDownBaby(key, NODE_CONSTRUCTORS[key])}
+            >
+              {NODE_DEFS[key].title}
+            </div>
+          );
+        }}
+      </For>
+      <div class="leading-none font-bold py-2">Renderers</div>
+      <For each={RENDER_KEYS}>
+        {(key) => {
+          return (
+            <div
+              class="p-3.5 border leading-none font-bold text-sm w-49"
+              onPointerDown={onPointerDownBaby(key, NODE_CONSTRUCTORS[key])}
+            >
+              {NODE_DEFS[key].title}
+            </div>
+          );
+        }}
+      </For>
+      <div class="leading-none font-bold py-2">Filter Effects</div>
+      <For each={FILTER_KEYS}>
+        {(key) => {
+          return (
+            <div
+              class="p-3.5 border leading-none font-bold text-sm w-49"
+              onPointerDown={onPointerDownBaby(key, NODE_CONSTRUCTORS[key])}
+            >
+              {NODE_DEFS[key].title}
+            </div>
+          );
+        }}
+      </For>
+      <Show when={babyPos()}>
+        {(pos) => (
+          <div
+            class="fixed top-0 left-0 p-4 border leading-none font-bold w-56 transition-scale"
+            style={{
+              translate: `${pos().x}px ${pos().y}px`,
+              scale: overToolbox() ? 0.875 : canvasScale(),
+              "transform-origin": `${babyOffsetX}px ${babyOffsetY}px`,
+            }}
+          >
+            {babyText}
+          </div>
+        )}
+      </Show>
+    </div>
+  );
+}
+
+function PlacedConnectorTail(props: {
+  node: NodeInfo;
+  field: NodeInfo["inputs"][string][number];
+}) {
   const { nodes } = useNodesContext();
   const headId = props.field.from!;
   const start = nodes[headId]!;
   const d = () => {
-    const startX = start.x + start.output.field.cx + BEZIER_HANDLE;
-    const startY = start.y + start.output.field.cy;
+    const startX = start.x + start.output.cx + BEZIER_HANDLE;
+    const startY = start.y + start.output.cy;
     const endX = props.node.x + props.field.cx + -BEZIER_HANDLE;
     const endY = props.node.y + props.field.cy;
     return connectPath(startX, startY, endX, endY);

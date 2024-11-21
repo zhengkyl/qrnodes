@@ -4,11 +4,10 @@ import {
   NodesContextProvider,
   useNodesContext,
 } from "./components/context/NodesContext";
-import { batch, createSignal, Show } from "solid-js";
+import { batch } from "solid-js";
 
 function AppWithContext() {
   const { nodes, setNodes, setActiveIds } = useNodesContext();
-  const [loaded, setLoaded] = createSignal(true);
   return (
     <div class="flex flex-col h-screen">
       <div class="flex gap-4">
@@ -23,21 +22,17 @@ function AppWithContext() {
         </button>
         <button
           onClick={async () => {
-            setLoaded(false);
             const jsonNodes = await navigator.clipboard.readText();
             batch(() => {
               setActiveIds([]);
               setNodes(JSON.parse(jsonNodes));
-              setLoaded(true);
             });
           }}
         >
           load state from clipboard
         </button>
       </div>
-      <Show when={loaded()}>
-        <Panels />
-      </Show>
+      <Panels />
     </div>
   );
 }

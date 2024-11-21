@@ -1,6 +1,7 @@
 import { Show } from "solid-js";
 import { useNodesContext } from "./context/NodesContext";
 import { unwrap } from "solid-js/store";
+import { NODE_DEFS } from "./nodes/factory";
 
 export function Details() {
   const { nodes, activeIds } = useNodesContext();
@@ -8,7 +9,7 @@ export function Details() {
   return (
     <div class="w-full h-full p-2 overflow-y-auto break-words whitespace-break-spaces">
       <Show when={activeIds().length}>
-        {prettyOutput(nodes[activeIds()[0]]!.output)}
+        {prettyOutput(nodes[activeIds()[0]]!)}
       </Show>
     </div>
   );
@@ -16,9 +17,11 @@ export function Details() {
 
 const TypedArray = Object.getPrototypeOf(Uint8Array);
 
-const prettyOutput = (output) => {
-  if (output.type === "display") return output.field.value;
-  return prettyPrint(unwrap(output.field.value));
+const prettyOutput = (node) => {
+  if (NODE_DEFS[node.key].outputDef.type === "display") {
+    return node.output.value;
+  }
+  return prettyPrint(unwrap(node.output.value));
 };
 
 const prettyPrint = (arg) => {
