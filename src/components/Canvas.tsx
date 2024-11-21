@@ -151,7 +151,7 @@ export function Canvas(props) {
     prevT = now;
   };
 
-  const { nodes, removeNode, setNodes, activeIds, setActiveIds } =
+  const { nodes, removeNodes, setNodes, activeIds, setActiveIds } =
     useNodesContext();
 
   let selectStartX;
@@ -334,7 +334,7 @@ export function Canvas(props) {
         const prevActive = activeIds();
         setActiveIds([]);
         setActiveBox(null);
-        prevActive.forEach((id) => removeNode(id));
+        removeNodes(prevActive);
       }
     }
   });

@@ -129,11 +129,17 @@ type NodeInfoBase<T extends keyof typeof NODE_DEFS> = {
 export function createNode<T extends keyof typeof NODE_DEFS>(
   base: NodeInfoBase<T>
 ): NodeInfo {
-  const node = base as unknown as NodeInfo;
+  const node = {
+    id: 0,
+    key: base.key,
+    x: base.x,
+    y: base.y,
+    width: 0,
+    height: 0,
+    inputs: base.inputs,
+    output: base.output,
+  } as unknown as NodeInfo;
 
-  node.id = 0;
-  node.width = 0;
-  node.height = 0;
   Object.values(node.inputs).forEach((input) => {
     input.forEach((field) => {
       field.from = null;

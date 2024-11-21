@@ -65,9 +65,10 @@ export function Node(props: NodeProps) {
     console.log("onMount", props.id);
   });
   onCleanup(() => {
-    console.log("onCleanup", props.id);
     if (observer != null) {
       observer.unobserve(nodeRef);
+    } else {
+      console.log("cleanup called with null observer");
     }
   });
 

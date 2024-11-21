@@ -5,6 +5,7 @@ import {
   type JSX,
   type Accessor,
   type Setter,
+  batch,
 } from "solid-js";
 import { createStore, type SetStoreFunction } from "solid-js/store";
 import type { NodeInfo } from "../nodes/shared";
@@ -14,7 +15,7 @@ export const NodesContext = createContext<{
   setActiveIds: Setter<number[]>;
   nodes: (NodeInfo | null)[];
   addNode: (node: NodeInfo) => number;
-  removeNode: (id: number) => void;
+  removeNodes: (ids: number[]) => void;
   setNodes: SetStoreFunction<(NodeInfo | null)[]>;
 }>();
 
@@ -27,9 +28,23 @@ export function NodesContextProvider(props: { children: JSX.Element }) {
     setNodes(node.id, node);
     return node.id;
   };
-  const removeNode = (id) => {
-    setNodes(id, null);
-    freeIds.push(id);
+  const removeNodes = (ids: number[]) => {
+    batch(() => {
+      nodes.forEach((node) => {
+        if (node == null) return;
+        Object.entries(node.inputs).forEach(([key, input]) => {
+          input.forEach((field, j) => {
+            if (field.from != null && ids.includes(field.from)) {
+              setNodes(node.id, "inputs", key, j, "from", null);
+            }
+          });
+        });
+      });
+      ids.forEach((id) => {
+        setNodes(id, null);
+      });
+      freeIds.push(...ids);
+    });
   };
 
   const [activeIds, setActiveIds] = createSignal<number[]>([]);
@@ -41,7 +56,7 @@ export function NodesContextProvider(props: { children: JSX.Element }) {
         setActiveIds,
         nodes,
         addNode,
-        removeNode,
+        removeNodes,
         setNodes,
       }}
     >
