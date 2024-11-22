@@ -54,7 +54,7 @@ export function useCanvasContext() {
   return context;
 }
 
-export function Canvas(props) {
+export function Canvas() {
   const [dragging, setDragging] = createSignal(false);
   const [panning, setPanning] = createSignal(false);
   const [canvasOffset, setCanvasOffset] = createSignal({ x: 0, y: 0 });

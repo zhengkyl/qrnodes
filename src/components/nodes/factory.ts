@@ -53,7 +53,7 @@ export const NODE_CONSTRUCTORS: {
       y,
       key: "qrCode",
       inputs: {
-        text: [{ value: "" }],
+        text: [{ value: "hello there" }],
         minVersion: [{ value: 1 }],
         minEcl: [{ value: "Low" }],
         mask: [{ value: "Auto" }],

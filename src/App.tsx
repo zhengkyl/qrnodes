@@ -20,7 +20,8 @@ function AppWithContext() {
             let currNode;
             let currOutput;
             let currInputs;
-            let currField;
+            let currInputArray;
+            let currInputArrayItem;
             navigator.clipboard.writeText(
               JSON.stringify(cleanNodes, function (key, v) {
                 if (this === cleanNodes) {
@@ -30,7 +31,7 @@ function AppWithContext() {
                   switch (key) {
                     case "width":
                     case "height":
-                      return 0;
+                      return undefined;
                     case "inputs":
                       currInputs = v;
                       return v;
@@ -39,15 +40,17 @@ function AppWithContext() {
                       return v;
                   }
                 } else if (this === currInputs) {
-                  currField = v;
+                  currInputArray = v;
                   return v;
-                } else if (this === currField || this === currOutput) {
+                } else if (this === currInputArray) {
+                  currInputArrayItem = v;
+                  return v;
+                } else if (this === currInputArrayItem || this === currOutput) {
                   switch (key) {
                     case "cx":
                     case "cy":
-                      return 0;
                     case "ref":
-                      return null;
+                      return undefined;
                     case "value": {
                       return this === currOutput &&
                         Object.keys(currNode.inputs).length
@@ -74,7 +77,8 @@ function AppWithContext() {
               setActiveIds([]);
               setNodes([]);
             });
-            setNodes(JSON.parse(input.value));
+            const result = JSON.parse(input.value);
+            setNodes(result);
             input.value = "";
           }}
         >
