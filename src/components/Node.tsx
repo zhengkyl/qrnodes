@@ -61,14 +61,9 @@ export function Node(props: NodeProps) {
       }
     });
     observer.observe(nodeRef);
-    console.log("onMount", props.id);
   });
   onCleanup(() => {
-    if (observer != null) {
-      observer.unobserve(nodeRef);
-    } else {
-      console.log("cleanup called with null observer");
-    }
+    observer.unobserve(nodeRef);
   });
 
   let nodeRef: HTMLDivElement;
@@ -87,10 +82,10 @@ export function Node(props: NodeProps) {
     nodes.forEach((node) => {
       if (node == null) return;
       if (node.id == fromId) return;
-      const inputDefs = NODE_DEFS[nodes[node.id]!.key].inputDefs;
+      const inputsDef = NODE_DEFS[nodes[node.id]!.key].inputsDef;
       const entries = Object.entries(node.inputs);
       entries.forEach(([key, input]) => {
-        if (inputDefs[key].type !== validType) return;
+        if (inputsDef[key].type !== validType) return;
         input.forEach((field, j) => {
           if (field.from != null) return;
           validInputs.push({
@@ -142,7 +137,7 @@ export function Node(props: NodeProps) {
         setNodes(toPath[0], "inputs", toPath[1], toPath[2], "from", fromId);
         const toNode = nodes[toPath[0]]!;
         const input = toNode.inputs[toPath[1]];
-        const inputDef = NODE_DEFS[toNode.key].inputDefs[toPath[1]];
+        const inputDef = NODE_DEFS[toNode.key].inputsDef[toPath[1]];
         if (inputDef.array && toPath[2] === input.length - 1) {
           setNodes(toPath[0], "inputs", toPath[1], toPath[2] + 1, {
             value: null,
@@ -167,7 +162,7 @@ export function Node(props: NodeProps) {
         if (toPath == null && delToPath != null) {
           const delNode = nodes[delToPath[0]]!;
           const input = delNode.inputs[delToPath[1]];
-          const inputDef = NODE_DEFS[delNode.key].inputDefs[delToPath[1]];
+          const inputDef = NODE_DEFS[delNode.key].inputsDef[delToPath[1]];
           if (inputDef.array && input.length > 1) {
             setNodes(delToPath[0], "inputs", delToPath[1], (prevFields) =>
               prevFields.filter((_, i) => i !== delToPath![2])
@@ -271,7 +266,7 @@ export function Node(props: NodeProps) {
     // TODO tracking doesn't work for objects that aren't set with produce
     // there aren't any nodes like that, but keep an eye out
     Object.entries(props.inputs).forEach(([key, input]) => {
-      const inputDef = nodeDef.inputDefs[key];
+      const inputDef = nodeDef.inputsDef[key];
       if (inputDef.array) {
         inputs[key] = [];
         input.forEach((field, j) => {
@@ -343,7 +338,7 @@ export function Node(props: NodeProps) {
         </div>
         <For each={Object.entries(props.inputs)}>
           {([key, input]) => {
-            const inputDef = nodeDef.inputDefs[key];
+            const inputDef = nodeDef.inputsDef[key];
             return (
               <div>
                 <div class="select-none text-sm leading-none pb-1">

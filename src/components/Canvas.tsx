@@ -586,7 +586,7 @@ const FILTER_KEYS: (keyof typeof NODE_DEFS)[] = [
 ];
 
 function Toolbox(props) {
-  const { addNode, setActiveIds } = useNodesContext();
+  const { addNode, setActiveIds, nextNodeId } = useNodesContext();
   const { toCanvasCoords, canvasScale } = useCanvasContext();
 
   let toolbox: HTMLDivElement;
@@ -621,13 +621,13 @@ function Toolbox(props) {
         !containsPoint(toolRect, e.clientX, e.clientY)
       ) {
         const { x, y } = toCanvasCoords(e.clientX, e.clientY);
-
         const node = func({
+          id: nextNodeId(),
           x: x - babyOffsetX,
           y: y - babyOffsetY,
         });
-        const id = addNode(node);
-        setActiveIds([id]);
+        addNode(node);
+        setActiveIds([node.id]);
         props.setActiveBox(null); // TODO make it computed based on active ids
         setOverToolbox(true);
       }

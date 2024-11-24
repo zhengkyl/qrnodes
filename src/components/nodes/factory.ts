@@ -22,13 +22,15 @@ export const NODE_DEFS = {
 
 export const NODE_CONSTRUCTORS: {
   [key in keyof typeof NODE_DEFS]: (coords: {
+    id: number;
     x: number;
     y: number;
   }) => NodeInfo;
 } = {
   /** Input nodes */
-  text: ({ x, y }) =>
+  text: ({ id, x, y }) =>
     createNode({
+      id,
       x,
       y,
       key: "text",
@@ -37,8 +39,9 @@ export const NODE_CONSTRUCTORS: {
         value: "",
       },
     }),
-  number: ({ x, y }) =>
+  number: ({ id, x, y }) =>
     createNode({
+      id,
       x,
       y,
       key: "number",
@@ -47,8 +50,9 @@ export const NODE_CONSTRUCTORS: {
         value: 0,
       },
     }),
-  qrCode: ({ x, y }) =>
+  qrCode: ({ id, x, y }) =>
     createNode({
+      id,
       x,
       y,
       key: "qrCode",
@@ -63,8 +67,9 @@ export const NODE_CONSTRUCTORS: {
       },
     }),
   /** Render nodes */
-  render: ({ x, y }) =>
+  render: ({ id, x, y }) =>
     createNode({
+      id,
       x,
       y,
       key: "render",
@@ -75,8 +80,9 @@ export const NODE_CONSTRUCTORS: {
         value: null,
       },
     }),
-  display: ({ x, y }) =>
+  display: ({ id, x, y }) =>
     createNode({
+      id,
       x,
       y,
       key: "display",
@@ -88,12 +94,14 @@ export const NODE_CONSTRUCTORS: {
       },
     }),
   /** Filter nodes */
-  filter: ({ x, y }) =>
+  filter: ({ id, x, y }) =>
     createNode({
+      id,
       x,
       y,
       key: "filter",
       inputs: {
+        id: [{ value: (id) => `filter_${id}` }],
         hast: [{ value: null }],
         effects: [{ value: null }],
       },
@@ -101,8 +109,9 @@ export const NODE_CONSTRUCTORS: {
         value: null,
       },
     }),
-  gaussianBlur: ({ x, y }) =>
+  gaussianBlur: ({ id, x, y }) =>
     createNode({
+      id,
       x,
       y,
       key: "gaussianBlur",
@@ -115,8 +124,9 @@ export const NODE_CONSTRUCTORS: {
         value: null,
       },
     }),
-  turbulence: ({ x, y }) =>
+  turbulence: ({ id, x, y }) =>
     createNode({
+      id,
       x,
       y,
       key: "turbulence",
@@ -131,8 +141,9 @@ export const NODE_CONSTRUCTORS: {
         value: null,
       },
     }),
-  displacementMap: ({ x, y }) =>
+  displacementMap: ({ id, x, y }) =>
     createNode({
+      id,
       x,
       y,
       key: "displacementMap",
@@ -150,11 +161,12 @@ export const NODE_CONSTRUCTORS: {
 };
 
 type NodeInfoBase<T extends keyof typeof NODE_DEFS> = {
+  id: number;
   key: T;
   x: number;
   y: number;
   inputs: {
-    [key in keyof (typeof NODE_DEFS)[T]["inputDefs"]]: [
+    [key in keyof (typeof NODE_DEFS)[T]["inputsDef"]]: [
       {
         value: any; // depends on type
       }
@@ -169,7 +181,7 @@ export function createNode<T extends keyof typeof NODE_DEFS>(
   base: NodeInfoBase<T>
 ): NodeInfo {
   const node = {
-    id: 0,
+    id: base.id,
     key: base.key,
     x: base.x,
     y: base.y,
@@ -181,6 +193,9 @@ export function createNode<T extends keyof typeof NODE_DEFS>(
 
   Object.values(node.inputs).forEach((input) => {
     input.forEach((field) => {
+      if (typeof field.value === "function") {
+        field.value = field.value(node.id);
+      }
       field.from = null;
       field.cx = 0;
       field.cy = 0;

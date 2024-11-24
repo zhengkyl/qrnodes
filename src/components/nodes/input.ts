@@ -3,7 +3,7 @@ import type { NodeDef } from "./shared";
 
 export const TextNode = {
   title: "Text",
-  inputDefs: {},
+  inputsDef: {},
   outputDef: {
     type: "string",
     label: "Output",
@@ -18,7 +18,7 @@ export const TextNode = {
 
 export const NumberNode = {
   title: "Number",
-  inputDefs: {},
+  inputsDef: {},
   outputDef: {
     type: "number",
     label: "Output",
@@ -30,7 +30,7 @@ export const NumberNode = {
 
 export const QrNode = {
   title: "QR Code",
-  inputDefs: {
+  inputsDef: {
     text: {
       type: "string",
       label: "Text",

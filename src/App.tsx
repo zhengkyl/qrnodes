@@ -5,9 +5,10 @@ import {
   useNodesContext,
 } from "./components/context/NodesContext";
 import { batch } from "solid-js";
+import type { NodeInfo } from "./components/nodes/shared";
 
 function AppWithContext() {
-  const { nodes, setNodes, setActiveIds } = useNodesContext();
+  const { nodes, setNodes, setActiveIds, setNextNodeId } = useNodesContext();
   let input;
   return (
     <div class="flex flex-col h-screen">
@@ -16,15 +17,15 @@ function AppWithContext() {
         <a href="https://github.com/zhengkyl/qrnodes">source code</a>
         <button
           onClick={() => {
-            const cleanNodes = unwrap(nodes);
+            const condensed = unwrap(nodes).filter((node) => node != null);
             let currNode;
             let currOutput;
             let currInputs;
             let currInputArray;
             let currInputArrayItem;
             navigator.clipboard.writeText(
-              JSON.stringify(cleanNodes, function (key, v) {
-                if (this === cleanNodes) {
+              JSON.stringify(condensed, function (key, v) {
+                if (this === condensed) {
                   currNode = v;
                   return v;
                 } else if (this === currNode) {
@@ -77,8 +78,15 @@ function AppWithContext() {
               setActiveIds([]);
               setNodes([]);
             });
-            const result = JSON.parse(input.value);
-            setNodes(result);
+            const condensed = JSON.parse(input.value);
+            const expanded: NodeInfo[] = [];
+            let maxId = 0;
+            condensed.forEach((node) => {
+              if (node.id > maxId) maxId = node.id;
+              expanded[node.id] = node;
+            });
+            setNodes(expanded);
+            setNextNodeId(maxId + 1);
             input.value = "";
           }}
         >

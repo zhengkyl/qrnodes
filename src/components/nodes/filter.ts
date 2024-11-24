@@ -3,7 +3,11 @@ import type { NodeDef } from "./shared";
 
 export const FilterNode = {
   title: "Filter",
-  inputDefs: {
+  inputsDef: {
+    id: {
+      type: "string",
+      label: "id",
+    },
     hast: {
       type: "hast",
       label: "SVG AST",
@@ -27,15 +31,15 @@ export const FilterNode = {
       defs = s("defs");
       root.children.unshift(defs);
     }
-    defs.children.push(s("filter", { id: "temp_gaussian" }, inputs.effects));
+    defs.children.push(s("filter", { id: inputs.id }, inputs.effects));
     if (
       root.children.length > 2 ||
       (root.children.length === 2 && root.children[1].filter != null)
     ) {
       const [defs, ...rest] = root.children;
-      root.children = [defs, s("g", { filter: "url(#temp_gaussian)" }, rest)];
+      root.children = [defs, s("g", { filter: `url(#${inputs.id})` }, rest)];
     } else {
-      root.children[1].filter = "url(#temp_gaussian)";
+      root.children[1].filter = `url(#${inputs.id})`;
     }
     return root;
   },
@@ -43,7 +47,7 @@ export const FilterNode = {
 
 export const GaussianBlurNode = {
   title: "Gaussian Blur",
-  inputDefs: {
+  inputsDef: {
     in: {
       type: "string",
       label: "in",
@@ -68,13 +72,20 @@ export const GaussianBlurNode = {
     label: "Output",
   },
   function: (inputs) => {
-    return s("feGaussianBlur", inputs);
+    return s(
+      "feGaussianBlur",
+      dedupe(inputs, {
+        in: "",
+        stdDeviation: 0,
+        edgeMode: "duplicate",
+      })
+    );
   },
 } satisfies NodeDef;
 
 export const TurbulenceNode = {
   title: "Turbulence",
-  inputDefs: {
+  inputsDef: {
     type: {
       type: "select",
       label: "Type",
@@ -110,13 +121,22 @@ export const TurbulenceNode = {
     label: "Output",
   },
   function: (inputs) => {
-    return s("feTurbulence", inputs);
+    return s(
+      "feTurbulence",
+      dedupe(inputs, {
+        type: "turbulence",
+        baseFrequency: 0,
+        numOctaves: 1,
+        seed: 0,
+        stitchTiles: "noStitch",
+      })
+    );
   },
 } satisfies NodeDef;
 
 export const DisplacementMapNode = {
   title: "DisplacementMap",
-  inputDefs: {
+  inputsDef: {
     in: {
       type: "string",
       label: "in",
@@ -152,6 +172,25 @@ export const DisplacementMapNode = {
     label: "Output",
   },
   function: (inputs) => {
-    return s("feDisplacementMap", inputs);
+    return s(
+      "feDisplacementMap",
+      dedupe(inputs, {
+        in: "",
+        in2: "",
+        scale: 0,
+        xChannelSelector: "A",
+        yChannelSelector: "A",
+      })
+    );
   },
 } satisfies NodeDef;
+
+function dedupe(inputs, defaults) {
+  const deduped = {};
+  Object.keys(inputs).forEach((key) => {
+    if (inputs[key] !== defaults[key]) {
+      deduped[key] = inputs[key];
+    }
+  });
+  return deduped;
+}

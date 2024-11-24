@@ -17,25 +17,30 @@ export const NodesContext = createContext<{
   setActiveIds: Setter<number[]>;
   displayId: Accessor<number | null>;
   nodes: (NodeInfo | null)[];
-  addNode: (node: NodeInfo) => number;
+  addNode: (node: NodeInfo) => void;
   removeNodes: (ids: number[]) => void;
   setNodes: SetStoreFunction<(NodeInfo | null)[]>;
+  nextNodeId: () => number;
+  setNextNodeId: (next: number) => void;
 }>();
 
 export function NodesContextProvider(props: { children: JSX.Element }) {
+  let nodeIdCount = 1;
+  const nextNodeId = () => nodeIdCount++;
+  const setNextNodeId = (next) => (nodeIdCount = next);
+
   const [nodes, setNodes] = createStore<(NodeInfo | null)[]>([]);
   const freeIds: number[] = [];
 
   const addNode = (node) => {
-    node.id = freeIds.pop() ?? nodes.length;
     setNodes(node.id, node);
-    return node.id;
   };
+
   const removeNodes = (ids: number[]) => {
     batch(() => {
       nodes.forEach((node) => {
         if (node == null) return;
-        const inputDefs = NODE_DEFS[node.key].inputDefs;
+        const inputsDef = NODE_DEFS[node.key].inputsDef;
         Object.entries(node.inputs).forEach(([key, input]) => {
           const removed: number[] = [];
           input.forEach((field, j) => {
@@ -45,7 +50,7 @@ export function NodesContextProvider(props: { children: JSX.Element }) {
             }
           });
 
-          if (removed.length && inputDefs[key].array) {
+          if (removed.length && inputsDef[key].array) {
             setNodes(node.id, "inputs", key, (prevFields) =>
               prevFields.filter((_, i) => !removed.includes(i))
             );
@@ -79,6 +84,8 @@ export function NodesContextProvider(props: { children: JSX.Element }) {
   return (
     <NodesContext.Provider
       value={{
+        nextNodeId,
+        setNextNodeId,
         activeIds,
         setActiveIds,
         displayId,

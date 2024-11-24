@@ -4,7 +4,7 @@ import type { NodeDef } from "./shared";
 
 export const DisplayNode = {
   title: "Display",
-  inputDefs: {
+  inputsDef: {
     hast: {
       type: "hast",
       label: "HTML AST",
@@ -22,7 +22,7 @@ export const DisplayNode = {
 
 export const RenderNode = {
   title: "Renderer",
-  inputDefs: {
+  inputsDef: {
     qrCode: {
       type: "qrCode",
       label: "QR Code",
@@ -34,8 +34,8 @@ export const RenderNode = {
   },
   function: (inputs) => {
     if (inputs.qrCode == null) return null;
-    const width = inputs.qrCode.version * 4 + 17;
 
+    const width = inputs.qrCode.version * 4 + 17;
     const margin = 2;
     let d = "";
     for (let y = 0; y < width; y++) {

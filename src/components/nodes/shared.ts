@@ -2,7 +2,7 @@ type InputType = "string" | "number" | "qrCode" | "select" | "hast" | "hast_fe";
 
 export type NodeDef = {
   title: string;
-  inputDefs: {
+  inputsDef: {
     [key: string]: {
       type: InputType;
       label: string;
