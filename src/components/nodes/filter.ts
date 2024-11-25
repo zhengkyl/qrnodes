@@ -185,6 +185,43 @@ export const DisplacementMapNode = {
   },
 } satisfies NodeDef;
 
+export const ImageNode = {
+  title: "Image",
+  inputsDef: {
+    href: {
+      type: "string",
+      label: "href",
+    },
+    x: {
+      type: "string",
+      label: "x",
+    },
+    y: {
+      type: "string",
+      label: "y",
+    },
+    width: {
+      type: "string",
+      label: "width",
+    },
+    height: {
+      type: "string",
+      label: "height",
+    },
+    // preserveAspectRatio: {
+    //   type: "string",
+    //   label: "",
+    // },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+  },
+  function: (inputs) => {
+    return s("feImage", inputs);
+  },
+} satisfies NodeDef;
+
 function dedupe(inputs, defaults) {
   const deduped = {};
   Object.keys(inputs).forEach((key) => {

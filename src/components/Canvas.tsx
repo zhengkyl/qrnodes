@@ -577,12 +577,18 @@ export function Canvas() {
 }
 
 const INPUT_KEYS: (keyof typeof NODE_DEFS)[] = ["text", "number", "qrCode"];
-const RENDER_KEYS: (keyof typeof NODE_DEFS)[] = ["render", "display"];
+const RENDER_KEYS: (keyof typeof NODE_DEFS)[] = [
+  "render",
+  "absoluteMap",
+  "dataUrl",
+  "display",
+];
 const FILTER_KEYS: (keyof typeof NODE_DEFS)[] = [
   "filter",
   "gaussianBlur",
   "turbulence",
   "displacementMap",
+  "image",
 ];
 
 function Toolbox(props) {

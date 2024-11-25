@@ -2,10 +2,16 @@ import {
   DisplacementMapNode,
   FilterNode,
   GaussianBlurNode,
+  ImageNode,
   TurbulenceNode,
 } from "./filter";
 import { TextNode, NumberNode, QrNode } from "./input";
-import { DisplayNode, RenderNode } from "./render";
+import {
+  AbsoluteMapNode,
+  DataUrlNode,
+  DisplayNode,
+  RenderNode,
+} from "./render";
 import type { NodeInfo } from "./shared";
 
 export const NODE_DEFS = {
@@ -18,6 +24,9 @@ export const NODE_DEFS = {
   gaussianBlur: GaussianBlurNode,
   turbulence: TurbulenceNode,
   displacementMap: DisplacementMapNode,
+  image: ImageNode,
+  dataUrl: DataUrlNode,
+  absoluteMap: AbsoluteMapNode,
 };
 
 export const NODE_CONSTRUCTORS: {
@@ -75,6 +84,32 @@ export const NODE_CONSTRUCTORS: {
       key: "render",
       inputs: {
         qrCode: [{ value: null }],
+      },
+      output: {
+        value: null,
+      },
+    }),
+  absoluteMap: ({ id, x, y }) =>
+    createNode({
+      id,
+      x,
+      y,
+      key: "absoluteMap",
+      inputs: {
+        qrCode: [{ value: null }],
+      },
+      output: {
+        value: null,
+      },
+    }),
+  dataUrl: ({ id, x, y }) =>
+    createNode({
+      id,
+      x,
+      y,
+      key: "dataUrl",
+      inputs: {
+        hast: [{ value: null }],
       },
       output: {
         value: null,
@@ -153,6 +188,23 @@ export const NODE_CONSTRUCTORS: {
         scale: [{ value: 1.5 }],
         xChannelSelector: [{ value: "A" }],
         yChannelSelector: [{ value: "A" }],
+      },
+      output: {
+        value: null,
+      },
+    }),
+  image: ({ id, x, y }) =>
+    createNode({
+      id,
+      x,
+      y,
+      key: "image",
+      inputs: {
+        href: [{ value: "" }],
+        x: [{ value: "" }],
+        y: [{ value: "" }],
+        width: [{ value: "" }],
+        height: [{ value: "" }],
       },
       output: {
         value: null,

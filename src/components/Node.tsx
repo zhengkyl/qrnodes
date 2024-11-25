@@ -469,7 +469,7 @@ function DisplayOutput(props) {
 }
 
 const INPUT_MAP = {
-  string: ResizingTextInput,
+  string: TextInput,
   number: NumberInput,
   select: Select,
 };
