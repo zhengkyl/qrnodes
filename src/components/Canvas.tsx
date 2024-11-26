@@ -585,6 +585,7 @@ const RENDER_KEYS: (keyof typeof NODE_DEFS)[] = [
 ];
 const FILTER_KEYS: (keyof typeof NODE_DEFS)[] = [
   "filter",
+  "applyFilter",
   "gaussianBlur",
   "turbulence",
   "displacementMap",

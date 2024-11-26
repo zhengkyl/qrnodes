@@ -8,14 +8,31 @@ export const FilterNode = {
       type: "string",
       label: "id",
     },
-    hast: {
-      type: "hast",
-      label: "SVG AST",
-    },
     effects: {
       type: "hast_fe",
       label: "Effects",
       array: true,
+    },
+  },
+  outputDef: {
+    type: "hast_filter",
+    label: "Filter",
+  },
+  function: (inputs) => {
+    return s("filter", { id: inputs.id }, inputs.effects);
+  },
+} satisfies NodeDef;
+
+export const ApplyFilterNode = {
+  title: "Apply Filter",
+  inputsDef: {
+    svg: {
+      type: "hast",
+      label: "SVG AST",
+    },
+    filter: {
+      type: "hast_filter",
+      label: "Filter",
       props: {},
     },
   },
@@ -24,22 +41,24 @@ export const FilterNode = {
     label: "Output",
   },
   function: (inputs) => {
-    if (inputs.hast == null) return null;
-    const root = structuredClone(inputs.hast);
+    if (inputs.svg == null) return null;
+    if (inputs.filter == null) return null;
+    const root = structuredClone(inputs.svg);
     let defs = root.children.find((child) => child.tagName === "defs");
     if (defs == null) {
       defs = s("defs");
       root.children.unshift(defs);
     }
-    defs.children.push(s("filter", { id: inputs.id }, inputs.effects));
+    const filterId = inputs.filter.properties.id;
+    defs.children.push(inputs.filter);
     if (
       root.children.length > 2 ||
-      (root.children.length === 2 && root.children[1].filter != null)
+      (root.children.length === 2 && root.children[1].properties.filter != null)
     ) {
       const [defs, ...rest] = root.children;
-      root.children = [defs, s("g", { filter: `url(#${inputs.id})` }, rest)];
+      root.children = [defs, s("g", { filter: `url(#${filterId})` }, rest)];
     } else {
-      root.children[1].filter = `url(#${inputs.id})`;
+      root.children[1].properties.filter = `url(#${filterId})`;
     }
     return root;
   },
@@ -192,26 +211,24 @@ export const ImageNode = {
       type: "string",
       label: "href",
     },
-    x: {
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+  },
+  function: (inputs) => {
+    return s("feImage", inputs);
+  },
+} satisfies NodeDef;
+
+export const MergeNode = {
+  title: "Merge",
+  inputsDef: {
+    in: {
       type: "string",
-      label: "x",
+      label: "in",
+      array: true,
     },
-    y: {
-      type: "string",
-      label: "y",
-    },
-    width: {
-      type: "string",
-      label: "width",
-    },
-    height: {
-      type: "string",
-      label: "height",
-    },
-    // preserveAspectRatio: {
-    //   type: "string",
-    //   label: "",
-    // },
   },
   outputDef: {
     type: "hast_fe",

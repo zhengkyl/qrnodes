@@ -3,7 +3,7 @@ import { Dynamic } from "solid-js/web";
 import { useCanvasContext } from "./Canvas";
 import { useNodesContext } from "./context/NodesContext";
 import { NumberInput } from "./ui/NumberInput";
-import { ResizingTextInput, TextInput } from "./ui/TextInput";
+import { TextInput } from "./ui/TextInput";
 import { Select } from "./ui/Select";
 import { equal } from "../util/path";
 import { produce, unwrap } from "solid-js/store";

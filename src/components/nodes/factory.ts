@@ -1,4 +1,5 @@
 import {
+  ApplyFilterNode,
   DisplacementMapNode,
   FilterNode,
   GaussianBlurNode,
@@ -21,6 +22,7 @@ export const NODE_DEFS = {
   render: RenderNode,
   display: DisplayNode,
   filter: FilterNode,
+  applyFilter: ApplyFilterNode,
   gaussianBlur: GaussianBlurNode,
   turbulence: TurbulenceNode,
   displacementMap: DisplacementMapNode,
@@ -137,8 +139,21 @@ export const NODE_CONSTRUCTORS: {
       key: "filter",
       inputs: {
         id: [{ value: (id) => `filter_${id}` }],
-        hast: [{ value: null }],
         effects: [{ value: null }],
+      },
+      output: {
+        value: null,
+      },
+    }),
+  applyFilter: ({ id, x, y }) =>
+    createNode({
+      id,
+      x,
+      y,
+      key: "applyFilter",
+      inputs: {
+        svg: [{ value: null }],
+        filter: [{ value: null }],
       },
       output: {
         value: null,
@@ -201,10 +216,6 @@ export const NODE_CONSTRUCTORS: {
       key: "image",
       inputs: {
         href: [{ value: "" }],
-        x: [{ value: "" }],
-        y: [{ value: "" }],
-        width: [{ value: "" }],
-        height: [{ value: "" }],
       },
       output: {
         value: null,

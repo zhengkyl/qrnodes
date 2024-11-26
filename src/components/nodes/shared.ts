@@ -1,4 +1,11 @@
-type InputType = "string" | "number" | "qrCode" | "select" | "hast" | "hast_fe";
+type InputType =
+  | "string"
+  | "number"
+  | "qrCode"
+  | "select"
+  | "hast"
+  | "hast_fe"
+  | "hast_filter";
 
 export type NodeDef = {
   title: string;

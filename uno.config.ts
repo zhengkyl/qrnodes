@@ -1,6 +1,7 @@
 import { defineConfig, transformerVariantGroup } from "unocss";
 
 export default defineConfig({
+  blocklist: ["filter"],
   transformers: [transformerVariantGroup()],
   theme: {
     colors: {

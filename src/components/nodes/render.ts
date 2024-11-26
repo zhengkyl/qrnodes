@@ -63,32 +63,44 @@ export const AbsoluteMapNode = {
       {
         xmlns: "http://www.w3.org/2000/svg",
         viewbox: `0 0 256 256`,
+        width: 256,
+        height: 256,
       },
       [
         s("defs", {}, [
           s(
             "linearGradient",
-            { id: "redGradient", x1: 0, x2: 1, y1: 0, y2: 0 },
+            { id: "redGradient", x1: "0%", x2: "100%", y1: "0%", y2: "0%" },
             [
-              s("stop", { offset: "0%", stopColor: "red", stopOpacity: "1" }),
-              s("stop", { offset: "100%", stopColor: "red", stopOpacity: "0" }),
+              s("stop", {
+                offset: "0%",
+                stopColor: "#ff0000",
+              }),
+              s("stop", {
+                offset: "100%",
+                stopColor: "#ff0000",
+                stopOpacity: "0",
+              }),
             ]
           ),
           s(
             "linearGradient",
-            { id: "blueGradient", x1: 0, x2: 0, y1: 0, y2: 1 },
+            { id: "blueGradient", x1: "0%", x2: "0%", y1: "0%", y2: "100%" },
             [
-              s("stop", { offset: "0%", stopColor: "blue", stopOpacity: "1" }),
+              s("stop", {
+                offset: "0%",
+                stopColor: "#0000ff",
+              }),
               s("stop", {
                 offset: "100%",
-                stopColor: "blue",
+                stopColor: "#0000ff",
                 stopOpacity: "0",
               }),
             ]
           ),
         ]),
         s("rect", {
-          fill: "black",
+          fill: "#000000",
           width: "100%",
           height: "100%",
         }),
