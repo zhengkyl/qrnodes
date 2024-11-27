@@ -9,6 +9,7 @@ import { equal } from "../util/path";
 import { produce, unwrap } from "solid-js/store";
 import type { NodeDef, NodeInfo } from "./nodes/shared";
 import { NODE_DEFS } from "./nodes/factory";
+import { FilterInput } from "./ui/FilterInputs";
 
 type NodeProps = NodeInfo;
 
@@ -63,7 +64,13 @@ export function Node(props: NodeProps) {
     observer.observe(nodeRef);
   });
   onCleanup(() => {
-    observer.unobserve(nodeRef);
+    if (observer != null) {
+      observer.unobserve(nodeRef);
+    } else {
+      console.log(
+        "SOMETHING ELSE IS WRONG, THIS ONLY HAPPENS DUE TO ANOTHER BUG"
+      );
+    }
   });
 
   let nodeRef: HTMLDivElement;
@@ -270,8 +277,7 @@ export function Node(props: NodeProps) {
       if (inputDef.array) {
         inputs[key] = [];
         input.forEach((field, j) => {
-          // always one extra field to allow appending
-          if (j === input.length - 1) return;
+          if (field == null) return;
           if (field.from != null) {
             inputs[key][j] = unwrapNodes[field.from]!.output.value;
             nodes[field.from]!.output.value;
@@ -437,7 +443,7 @@ export function Node(props: NodeProps) {
               when={Object.keys(props.inputs).length}
               fallback={
                 <Dynamic
-                  component={INPUT_MAP[nodeDef.outputDef.type]}
+                  component={INPUT_MAP[nodeDef.outputDef.type] ?? TextInput}
                   value={props.output.value}
                   onValue={(v) => {
                     setNodes(props.id, "output", "value", v);
@@ -472,4 +478,5 @@ const INPUT_MAP = {
   string: TextInput,
   number: NumberInput,
   select: Select,
+  hast_fe: FilterInput,
 };

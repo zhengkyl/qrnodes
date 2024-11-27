@@ -8,9 +8,9 @@ export const FilterNode = {
       type: "string",
       label: "id",
     },
-    effects: {
+    results: {
       type: "hast_fe",
-      label: "Effects",
+      label: "results",
       array: true,
     },
   },
@@ -19,7 +19,12 @@ export const FilterNode = {
     label: "Filter",
   },
   function: (inputs) => {
-    return s("filter", { id: inputs.id }, inputs.effects);
+    console.log(inputs);
+    return s(
+      "filter",
+      { id: inputs.id },
+      inputs.results.filter((res) => res != null).flatMap((res) => res.effects)
+    );
   },
 } satisfies NodeDef;
 
@@ -68,7 +73,7 @@ export const GaussianBlurNode = {
   title: "Gaussian Blur",
   inputsDef: {
     in: {
-      type: "string",
+      type: "hast_fe",
       label: "in",
     },
     stdDeviation: {
@@ -85,20 +90,35 @@ export const GaussianBlurNode = {
         options: ["duplicate", "wrap", "none"],
       },
     },
+    result: {
+      type: "string",
+      label: "result",
+    },
   },
   outputDef: {
     type: "hast_fe",
     label: "Output",
   },
   function: (inputs) => {
-    return s(
-      "feGaussianBlur",
-      dedupe(inputs, {
-        in: "",
-        stdDeviation: 0,
-        edgeMode: "duplicate",
-      })
-    );
+    return {
+      name: inputs.result,
+      effects: [
+        ...inputs.in.effects,
+        s(
+          "feGaussianBlur",
+          dedupe(
+            {
+              ...inputs,
+              in: inputs.in.name,
+            },
+            {
+              stdDeviation: 0,
+              edgeMode: "duplicate",
+            }
+          )
+        ),
+      ],
+    };
   },
 } satisfies NodeDef;
 
@@ -134,22 +154,31 @@ export const TurbulenceNode = {
         options: ["noStitch", "stitch"],
       },
     },
+    result: {
+      type: "string",
+      label: "result",
+    },
   },
   outputDef: {
     type: "hast_fe",
-    label: "Output",
+    label: "result",
   },
   function: (inputs) => {
-    return s(
-      "feTurbulence",
-      dedupe(inputs, {
-        type: "turbulence",
-        baseFrequency: 0,
-        numOctaves: 1,
-        seed: 0,
-        stitchTiles: "noStitch",
-      })
-    );
+    return {
+      name: inputs.result,
+      effects: [
+        s(
+          "feTurbulence",
+          dedupe(inputs, {
+            type: "turbulence",
+            baseFrequency: 0,
+            numOctaves: 1,
+            seed: 0,
+            stitchTiles: "noStitch",
+          })
+        ),
+      ],
+    };
   },
 } satisfies NodeDef;
 
@@ -157,11 +186,11 @@ export const DisplacementMapNode = {
   title: "DisplacementMap",
   inputsDef: {
     in: {
-      type: "string",
+      type: "hast_fe",
       label: "in",
     },
     in2: {
-      type: "string",
+      type: "hast_fe",
       label: "in2",
     },
     scale: {
@@ -185,22 +214,39 @@ export const DisplacementMapNode = {
         options: ["R", "G", "B", "A"],
       },
     },
+    result: {
+      type: "string",
+      label: "result",
+    },
   },
   outputDef: {
     type: "hast_fe",
     label: "Output",
   },
   function: (inputs) => {
-    return s(
-      "feDisplacementMap",
-      dedupe(inputs, {
-        in: "",
-        in2: "",
-        scale: 0,
-        xChannelSelector: "A",
-        yChannelSelector: "A",
-      })
-    );
+    return {
+      name: inputs.result,
+      effects: [
+        ...inputs.in.effects,
+        ...inputs.in2.effects,
+        s(
+          "feDisplacementMap",
+          dedupe(
+            {
+              ...inputs,
+              in: inputs.in.name,
+              in2: inputs.in2.name,
+            },
+            {
+              in2: "",
+              scale: 0,
+              xChannelSelector: "A",
+              yChannelSelector: "A",
+            }
+          )
+        ),
+      ],
+    };
   },
 } satisfies NodeDef;
 
@@ -211,13 +257,20 @@ export const ImageNode = {
       type: "string",
       label: "href",
     },
+    result: {
+      type: "string",
+      label: "result",
+    },
   },
   outputDef: {
     type: "hast_fe",
     label: "Output",
   },
   function: (inputs) => {
-    return s("feImage", inputs);
+    return {
+      name: inputs.result,
+      effects: [s("feImage", inputs)],
+    };
   },
 } satisfies NodeDef;
 
@@ -229,13 +282,25 @@ export const MergeNode = {
       label: "in",
       array: true,
     },
+    result: {
+      type: "string",
+      label: "result",
+    },
   },
   outputDef: {
     type: "hast_fe",
     label: "Output",
   },
   function: (inputs) => {
-    return s("feImage", inputs);
+    return {
+      name: inputs.result,
+      effects: [
+        s("feMerge", { result: inputs.result }, [
+          ...inputs.in.flatMap((result) => result.effects),
+          ...inputs.in.map((result) => s("feMergeNode", { in: result.name })),
+        ]),
+      ],
+    };
   },
 } satisfies NodeDef;
 

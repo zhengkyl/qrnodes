@@ -4,6 +4,7 @@ import {
   FilterNode,
   GaussianBlurNode,
   ImageNode,
+  MergeNode,
   TurbulenceNode,
 } from "./filter";
 import { TextNode, NumberNode, QrNode } from "./input";
@@ -29,6 +30,7 @@ export const NODE_DEFS = {
   image: ImageNode,
   dataUrl: DataUrlNode,
   absoluteMap: AbsoluteMapNode,
+  merge: MergeNode,
 };
 
 export const NODE_CONSTRUCTORS: {
@@ -139,7 +141,7 @@ export const NODE_CONSTRUCTORS: {
       key: "filter",
       inputs: {
         id: [{ value: (id) => `filter_${id}` }],
-        effects: [{ value: null }],
+        results: [{ value: null }],
       },
       output: {
         value: null,
@@ -166,9 +168,10 @@ export const NODE_CONSTRUCTORS: {
       y,
       key: "gaussianBlur",
       inputs: {
-        in: [{ value: "SourceGraphic" }],
+        in: [{ value: { name: "SourceGraphic", effects: [] } }],
         stdDeviation: [{ value: 0.5 }],
         edgeMode: [{ value: "duplicate" }],
+        result: [{ value: (id) => `gaussianBlur_${id}` }],
       },
       output: {
         value: null,
@@ -186,6 +189,7 @@ export const NODE_CONSTRUCTORS: {
         numOctaves: [{ value: 1 }],
         seed: [{ value: 0 }],
         stitchTiles: [{ value: "noStitch" }],
+        result: [{ value: (id) => `turbulence_${id}` }],
       },
       output: {
         value: null,
@@ -198,11 +202,12 @@ export const NODE_CONSTRUCTORS: {
       y,
       key: "displacementMap",
       inputs: {
-        in: [{ value: "SourceGraphic" }],
-        in2: [{ value: "" }],
+        in: [{ value: { name: "SourceGraphic", effects: [] } }],
+        in2: [{ value: null }],
         scale: [{ value: 1.5 }],
         xChannelSelector: [{ value: "A" }],
         yChannelSelector: [{ value: "A" }],
+        result: [{ value: (id) => `displacementMap_${id}` }],
       },
       output: {
         value: null,
@@ -216,6 +221,21 @@ export const NODE_CONSTRUCTORS: {
       key: "image",
       inputs: {
         href: [{ value: "" }],
+        result: [{ value: (id) => `image_${id}` }],
+      },
+      output: {
+        value: null,
+      },
+    }),
+  merge: ({ id, x, y }) =>
+    createNode({
+      id,
+      x,
+      y,
+      key: "merge",
+      inputs: {
+        in: [{ value: { name: "SourceGraphic", effects: [] } }],
+        result: [{ value: (id) => `image_${id}` }],
       },
       output: {
         value: null,

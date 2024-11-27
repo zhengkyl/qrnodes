@@ -33,7 +33,7 @@ const prettyPrint = (arg) => {
       }
 
       if (Array.isArray(arg)) {
-        return JSON.stringify(arg);
+        return "[" + arg.map((a) => prettyPrint(a)).join(",") + "]";
       }
 
       let s = "{";
