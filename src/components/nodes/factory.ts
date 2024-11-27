@@ -100,7 +100,8 @@ export const NODE_CONSTRUCTORS: {
       y,
       key: "absoluteMap",
       inputs: {
-        qrCode: [{ value: null }],
+        xColor: [{ value: "red" }],
+        yColor: [{ value: "blue" }],
       },
       output: {
         value: null,
@@ -234,8 +235,8 @@ export const NODE_CONSTRUCTORS: {
       y,
       key: "merge",
       inputs: {
-        in: [{ value: { name: "SourceGraphic", effects: [] } }],
-        result: [{ value: (id) => `image_${id}` }],
+        in: [{ value: null }],
+        result: [{ value: (id) => `merge_${id}` }],
       },
       output: {
         value: null,

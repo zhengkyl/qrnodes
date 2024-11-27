@@ -19,7 +19,6 @@ export const FilterNode = {
     label: "Filter",
   },
   function: (inputs) => {
-    console.log(inputs);
     return s(
       "filter",
       { id: inputs.id },
@@ -278,7 +277,7 @@ export const MergeNode = {
   title: "Merge",
   inputsDef: {
     in: {
-      type: "string",
+      type: "hast_fe",
       label: "in",
       array: true,
     },
@@ -292,12 +291,13 @@ export const MergeNode = {
     label: "Output",
   },
   function: (inputs) => {
+    const mergeIn = inputs.in.filter((v) => v != null);
     return {
       name: inputs.result,
       effects: [
+        ...mergeIn.flatMap((result) => result.effects),
         s("feMerge", { result: inputs.result }, [
-          ...inputs.in.flatMap((result) => result.effects),
-          ...inputs.in.map((result) => s("feMergeNode", { in: result.name })),
+          ...mergeIn.map((result) => s("feMergeNode", { in: result.name })),
         ]),
       ],
     };

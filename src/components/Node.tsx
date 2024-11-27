@@ -67,9 +67,7 @@ export function Node(props: NodeProps) {
     if (observer != null) {
       observer.unobserve(nodeRef);
     } else {
-      console.log(
-        "SOMETHING ELSE IS WRONG, THIS ONLY HAPPENS DUE TO ANOTHER BUG"
-      );
+      console.error("observer IS NULL DUE TO BUG SOMEWHERE ELSE");
     }
   });
 

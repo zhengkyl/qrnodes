@@ -48,9 +48,13 @@ export const RenderNode = {
 export const AbsoluteMapNode = {
   title: "Absolute Map",
   inputsDef: {
-    qrCode: {
-      type: "qrCode",
-      label: "QR Code",
+    xColor: {
+      type: "string",
+      label: "X color",
+    },
+    yColor: {
+      type: "string",
+      label: "Y color",
     },
   },
   outputDef: {
@@ -70,30 +74,30 @@ export const AbsoluteMapNode = {
         s("defs", {}, [
           s(
             "linearGradient",
-            { id: "redGradient", x1: "0%", x2: "100%", y1: "0%", y2: "0%" },
+            { id: "xGradient", x1: "0%", x2: "100%", y1: "0%", y2: "0%" },
             [
               s("stop", {
                 offset: "0%",
-                stopColor: "#ff0000",
+                stopColor: inputs.xColor,
               }),
               s("stop", {
                 offset: "100%",
-                stopColor: "#ff0000",
+                stopColor: inputs.xColor,
                 stopOpacity: "0",
               }),
             ]
           ),
           s(
             "linearGradient",
-            { id: "blueGradient", x1: "0%", x2: "0%", y1: "0%", y2: "100%" },
+            { id: "yGradient", x1: "0%", x2: "0%", y1: "0%", y2: "100%" },
             [
               s("stop", {
                 offset: "0%",
-                stopColor: "#0000ff",
+                stopColor: inputs.yColor,
               }),
               s("stop", {
                 offset: "100%",
-                stopColor: "#0000ff",
+                stopColor: inputs.yColor,
                 stopOpacity: "0",
               }),
             ]
@@ -105,12 +109,12 @@ export const AbsoluteMapNode = {
           height: "100%",
         }),
         s("rect", {
-          fill: "url(#redGradient)",
+          fill: "url(#xGradient)",
           width: "100%",
           height: "100%",
         }),
         s("rect", {
-          fill: "url(#blueGradient)",
+          fill: "url(#yGradient)",
           width: "100%",
           height: "100%",
           style: "mix-blend-mode:screen",
