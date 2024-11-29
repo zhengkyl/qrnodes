@@ -68,6 +68,26 @@ export const ApplyFilterNode = {
   },
 } satisfies NodeDef;
 
+export const SourceNode = {
+  title: "Source",
+  inputsDef: {
+    name: {
+      type: "string",
+      label: "name",
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "result",
+  },
+  function: (inputs) => {
+    return {
+      name: inputs.name,
+      effects: [],
+    };
+  },
+} satisfies NodeDef;
+
 export const GaussianBlurNode = {
   title: "Gaussian Blur",
   inputsDef: {
@@ -99,16 +119,17 @@ export const GaussianBlurNode = {
     label: "Output",
   },
   function: (inputs) => {
+    const in1 = inputs.in ?? { name: undefined, effects: [] };
     return {
       name: inputs.result,
       effects: [
-        ...inputs.in.effects,
+        ...in1.effects,
         s(
           "feGaussianBlur",
-          dedupe(
+          removeDefaults(
             {
               ...inputs,
-              in: inputs.in.name,
+              in: in1.name,
             },
             {
               stdDeviation: 0,
@@ -168,7 +189,7 @@ export const TurbulenceNode = {
       effects: [
         s(
           "feTurbulence",
-          dedupe(inputs, {
+          removeDefaults(inputs, {
             type: "turbulence",
             baseFrequency: 0,
             numOctaves: 1,
@@ -223,18 +244,19 @@ export const DisplacementMapNode = {
     label: "Output",
   },
   function: (inputs) => {
+    const in1 = inputs.in ?? { name: undefined, effects: [] };
+    const in2 = inputs.in2 ?? { name: undefined, effects: [] };
     return {
       name: inputs.result,
       effects: [
-        ...inputs.in.effects,
-        ...inputs.in2.effects,
+        ...dedupedEffects([...in1.effects, ...in2.effects]),
         s(
           "feDisplacementMap",
-          dedupe(
+          removeDefaults(
             {
               ...inputs,
-              in: inputs.in.name,
-              in2: inputs.in2.name,
+              in: in1.name,
+              in2: in2.name,
             },
             {
               in2: "",
@@ -295,7 +317,7 @@ export const MergeNode = {
     return {
       name: inputs.result,
       effects: [
-        ...mergeIn.flatMap((result) => result.effects),
+        ...dedupedEffects(mergeIn.flatMap((result) => result.effects)),
         s("feMerge", { result: inputs.result }, [
           ...mergeIn.map((result) => s("feMergeNode", { in: result.name })),
         ]),
@@ -304,12 +326,28 @@ export const MergeNode = {
   },
 } satisfies NodeDef;
 
-function dedupe(inputs, defaults) {
-  const deduped = {};
+function removeDefaults(inputs, defaults) {
+  const nonDefault = {};
   Object.keys(inputs).forEach((key) => {
     if (inputs[key] !== defaults[key]) {
-      deduped[key] = inputs[key];
+      nonDefault[key] = inputs[key];
     }
   });
-  return deduped;
+  return nonDefault;
+}
+
+function dedupedEffects(effects) {
+  const results = new Set();
+  return effects.filter((node) => {
+    const result = node.properties.result;
+    if (result == null) {
+      console.log("found node without result", node);
+      return true;
+    }
+    if (results.has(result)) {
+      return false;
+    }
+    results.add(result);
+    return true;
+  });
 }

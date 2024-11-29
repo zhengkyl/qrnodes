@@ -5,6 +5,7 @@ import {
   GaussianBlurNode,
   ImageNode,
   MergeNode,
+  SourceNode,
   TurbulenceNode,
 } from "./filter";
 import { TextNode, NumberNode, QrNode } from "./input";
@@ -24,6 +25,7 @@ export const NODE_DEFS = {
   display: DisplayNode,
   filter: FilterNode,
   applyFilter: ApplyFilterNode,
+  source: SourceNode,
   gaussianBlur: GaussianBlurNode,
   turbulence: TurbulenceNode,
   displacementMap: DisplacementMapNode,
@@ -162,6 +164,19 @@ export const NODE_CONSTRUCTORS: {
         value: null,
       },
     }),
+  source: ({ id, x, y }) =>
+    createNode({
+      id,
+      x,
+      y,
+      key: "source",
+      inputs: {
+        name: [{ value: "SourceGraphic" }],
+      },
+      output: {
+        value: null,
+      },
+    }),
   gaussianBlur: ({ id, x, y }) =>
     createNode({
       id,
@@ -169,7 +184,7 @@ export const NODE_CONSTRUCTORS: {
       y,
       key: "gaussianBlur",
       inputs: {
-        in: [{ value: { name: "SourceGraphic", effects: [] } }],
+        in: [{ value: null }],
         stdDeviation: [{ value: 0.5 }],
         edgeMode: [{ value: "duplicate" }],
         result: [{ value: (id) => `gaussianBlur_${id}` }],
@@ -203,7 +218,7 @@ export const NODE_CONSTRUCTORS: {
       y,
       key: "displacementMap",
       inputs: {
-        in: [{ value: { name: "SourceGraphic", effects: [] } }],
+        in: [{ value: null }],
         in2: [{ value: null }],
         scale: [{ value: 1.5 }],
         xChannelSelector: [{ value: "A" }],
