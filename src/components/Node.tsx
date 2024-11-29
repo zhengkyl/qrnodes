@@ -64,12 +64,34 @@ export function Node(props: NodeProps) {
     observer.observe(nodeRef);
   });
   onCleanup(() => {
-    if (observer != null) {
-      observer.unobserve(nodeRef);
-    } else {
-      console.error("observer IS NULL DUE TO BUG SOMEWHERE ELSE");
-    }
+    // observer is null if something undefined, but this runs before that code errors
+    if (observer == null) return;
+    observer.unobserve(nodeRef);
   });
+
+  const setFieldNull = (toPath) => {
+    setNodes(toPath[0], "inputs", toPath[1], toPath[2], "from", null);
+
+    if (
+      NODE_DEFS[nodes[toPath[0]]!.key].inputsDef[toPath[1]].array &&
+      toPath[2] === nodes[toPath[0]]!.inputs[toPath[1]].length - 2
+    ) {
+      setNodes(toPath[0], "inputs", toPath[1], (fields) => fields.slice(0, -1));
+    }
+  };
+
+  const setFieldFrom = (toPath, fromId) => {
+    setNodes(toPath[0], "inputs", toPath[1], toPath[2], "from", fromId);
+
+    const toNode = nodes[toPath[0]]!;
+    const input = toNode.inputs[toPath[1]];
+    const inputDef = NODE_DEFS[toNode.key].inputsDef[toPath[1]];
+    if (inputDef.array && toPath[2] === input.length - 1) {
+      setNodes(toPath[0], "inputs", toPath[1], toPath[2] + 1, {
+        value: null,
+      });
+    }
+  };
 
   let nodeRef: HTMLDivElement;
 
@@ -77,19 +99,22 @@ export function Node(props: NodeProps) {
     fromId: number,
     oldToPath: InputPathKey | null
   ) => {
-    const validType = NODE_DEFS[nodes[fromId]!.key].outputDef.type;
+    if (oldToPath != null) {
+      setFieldNull(oldToPath);
+    }
+    setGhostHead(fromId);
+
     const validInputs: {
       cx: number;
       cy: number;
       path: InputPathKey;
     }[] = [];
-
+    const validType = NODE_DEFS[nodes[fromId]!.key].outputDef.type;
     nodes.forEach((node) => {
       if (node == null) return;
       if (node.id == fromId) return;
       const inputsDef = NODE_DEFS[nodes[node.id]!.key].inputsDef;
-      const entries = Object.entries(node.inputs);
-      entries.forEach(([key, input]) => {
+      Object.entries(node.inputs).forEach(([key, input]) => {
         if (inputsDef[key].type !== validType) return;
         input.forEach((field, j) => {
           if (field.from != null) return;
@@ -103,7 +128,7 @@ export function Node(props: NodeProps) {
     });
 
     let toPath: InputPathKey | null = null;
-    let delToPath: InputPathKey | null = oldToPath;
+    let avoidOld = oldToPath != null;
     const onMoveTail = (e: PointerEvent) => {
       const coords = toCanvasCoords(e.clientX, e.clientY);
       setHandleCoords(coords);
@@ -116,13 +141,13 @@ export function Node(props: NodeProps) {
         const dy = coords.y - input.cy;
         const d2 = dx * dx + dy * dy;
 
-        const isOldPath = oldToPath && equal(input.path, oldToPath);
+        const isOldPath = avoidOld && equal(input.path, oldToPath!);
         if (d2 < R_SQUARED) {
           if (!isOldPath) {
             overlaps.push({ dist: d2, path: input.path });
           }
         } else if (isOldPath) {
-          oldToPath = null;
+          avoidOld = false;
         }
       });
 
@@ -139,21 +164,12 @@ export function Node(props: NodeProps) {
         }
         toPath = newPath;
         setGhostTail(toPath);
-        setNodes(toPath[0], "inputs", toPath[1], toPath[2], "from", fromId);
-        const toNode = nodes[toPath[0]]!;
-        const input = toNode.inputs[toPath[1]];
-        const inputDef = NODE_DEFS[toNode.key].inputsDef[toPath[1]];
-        if (inputDef.array && toPath[2] === input.length - 1) {
-          setNodes(toPath[0], "inputs", toPath[1], toPath[2] + 1, {
-            value: null,
-          });
-        }
+        setFieldFrom(toPath, fromId);
       } else {
         if (toPath == null) return;
-        setGhostTail(null);
-        setNodes(toPath[0], "inputs", toPath[1], toPath[2], "from", null);
-        delToPath = toPath;
         toPath = null;
+        setGhostTail(null);
+        setFieldNull(toPath);
       }
     };
 
@@ -164,13 +180,17 @@ export function Node(props: NodeProps) {
         setGhostHead(null);
         setGhostTail(null);
 
-        if (toPath == null && delToPath != null) {
-          const delNode = nodes[delToPath[0]]!;
-          const input = delNode.inputs[delToPath[1]];
-          const inputDef = NODE_DEFS[delNode.key].inputsDef[delToPath[1]];
-          if (inputDef.array && input.length > 1) {
-            setNodes(delToPath[0], "inputs", delToPath[1], (prevFields) =>
-              prevFields.filter((_, i) => i !== delToPath![2])
+        if (
+          oldToPath != null &&
+          (toPath == null || !equal(oldToPath, toPath))
+        ) {
+          const delNode = nodes[oldToPath[0]]!;
+          const input = delNode.inputs[oldToPath[1]];
+          const inputDef = NODE_DEFS[delNode.key].inputsDef[oldToPath[1]];
+          // last one removed by move handler already
+          if (inputDef.array && oldToPath[2] !== input.length - 1) {
+            setNodes(oldToPath[0], "inputs", oldToPath[1], (prevFields) =>
+              prevFields.filter((_, i) => i !== oldToPath[2])
             );
           }
         }
@@ -181,88 +201,65 @@ export function Node(props: NodeProps) {
     document.addEventListener("pointerup", onReleaseTail);
   };
 
-  const onPointerDownHead =
-    (input, field, inputDef) => (e, path: InputPathKey) => {
-      e.preventDefault(); // don't trigger img drag
-      e.stopImmediatePropagation();
+  const onPointerDownHead = (inputDef, toPath: InputPathKey) => {
+    setGhostTail(toPath);
+
+    const validOutputs = nodes.filter(
+      (node) =>
+        node != null &&
+        node.id !== props.id &&
+        NODE_DEFS[node.key].outputDef.type === inputDef.type
+    ) as NodeInfo[];
+
+    let fromId: number | null = null;
+    const onMoveHead = (e: PointerEvent) => {
       const coords = toCanvasCoords(e.clientX, e.clientY);
       setHandleCoords(coords);
 
-      let fromId = field.from;
-      if (fromId != null) {
-        setGhostHead(fromId);
-        setNodes(path[0], "inputs", path[1], path[2], "from", null);
-        onPointerDownTail(fromId, path);
-      } else {
-        setGhostTail(path);
+      const overlaps: { dist: number; id: number }[] = [];
+      validOutputs.forEach((node) => {
+        const cx = node.x + node.output.cx;
+        const cy = node.y + node.output.cy;
 
-        // TODO depth list
-        const validHeadSlots = nodes.filter(
-          (node) =>
-            node != null &&
-            node.id !== props.id &&
-            NODE_DEFS[node.key].outputDef.type === inputDef.type
-        ) as NodeInfo[];
+        const dx = coords.x - cx;
+        const dy = coords.y - cy;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < R_SQUARED) {
+          overlaps.push({ dist: d2, id: node.id });
+        }
+      });
 
-        const onMoveHead = (e: PointerEvent) => {
-          const coords = toCanvasCoords(e.clientX, e.clientY);
-          setHandleCoords(coords);
-
-          const overlaps: { dist: number; id: number }[] = [];
-          validHeadSlots.forEach((node) => {
-            const cx = node.x + node.output.cx;
-            const cy = node.y + node.output.cy;
-
-            const dx = coords.x - cx;
-            const dy = coords.y - cy;
-            const d2 = dx * dx + dy * dy;
-            if (d2 < R_SQUARED) {
-              overlaps.push({ dist: d2, id: node.id });
-            }
-          });
-
-          if (overlaps.length) {
-            for (let i = 1; i < overlaps.length; i++) {
-              if (overlaps[i].dist < overlaps[0].dist) {
-                overlaps[0].dist = overlaps[i].dist;
-                overlaps[0].id = overlaps[i].id;
-              }
-            }
-            let newId = overlaps[0].id;
-            if (fromId === newId) return;
-            fromId = newId;
-            setGhostHead(fromId);
-            setNodes(path[0], "inputs", path[1], path[2], "from", fromId);
-            if (inputDef.array && path[2] === input.length - 1) {
-              setNodes(path[0], "inputs", path[1], path[2] + 1, {
-                value: null,
-              });
-            }
-          } else {
-            if (fromId == null) return;
-            fromId = null;
-            setGhostHead(null);
-            setNodes(path[0], "inputs", path[1], path[2], "from", null);
-            if (inputDef.array) {
-              setNodes(path[0], "inputs", path[1], (prevFields) =>
-                prevFields.filter((_, i) => i !== path[2] + 1)
-              );
-            }
+      if (overlaps.length) {
+        for (let i = 1; i < overlaps.length; i++) {
+          if (overlaps[i].dist < overlaps[0].dist) {
+            overlaps[0].dist = overlaps[i].dist;
+            overlaps[0].id = overlaps[i].id;
           }
-        };
-        const onReleaseHead = () => {
-          document.removeEventListener("pointermove", onMoveHead);
-          document.removeEventListener("pointerup", onReleaseHead);
-          batch(() => {
-            setGhostHead(null);
-            setGhostTail(null);
-          });
-        };
-
-        document.addEventListener("pointermove", onMoveHead);
-        document.addEventListener("pointerup", onReleaseHead);
+        }
+        let newId = overlaps[0].id;
+        if (fromId === newId) return;
+        fromId = newId;
+        setGhostHead(fromId);
+        setFieldFrom(toPath, fromId);
+      } else {
+        if (fromId == null) return;
+        fromId = null;
+        setGhostHead(null);
+        setFieldNull(toPath);
       }
     };
+    const onReleaseHead = () => {
+      document.removeEventListener("pointermove", onMoveHead);
+      document.removeEventListener("pointerup", onReleaseHead);
+      batch(() => {
+        setGhostHead(null);
+        setGhostTail(null);
+      });
+    };
+
+    document.addEventListener("pointermove", onMoveHead);
+    document.addEventListener("pointerup", onReleaseHead);
+  };
 
   const outputValue = () => {
     const inputs = {};
@@ -350,11 +347,6 @@ export function Node(props: NodeProps) {
                 </div>
                 <For each={input}>
                   {(field, j) => {
-                    const onPointerDown = onPointerDownHead(
-                      input,
-                      field,
-                      inputDef
-                    );
                     return (
                       <div class="flex items-center pb-2">
                         <div
@@ -363,7 +355,20 @@ export function Node(props: NodeProps) {
                           }}
                           class="absolute -left-4 w-8 h-8"
                           onPointerDown={(e) => {
-                            onPointerDown(e, [props.id, key, j()]);
+                            e.preventDefault(); // don't trigger img drag
+                            e.stopImmediatePropagation();
+                            const coords = toCanvasCoords(e.clientX, e.clientY);
+                            setHandleCoords(coords);
+
+                            if (field.from != null) {
+                              onPointerDownTail(field.from, [
+                                props.id,
+                                key,
+                                j(),
+                              ]);
+                            } else {
+                              onPointerDownHead(inputDef, [props.id, key, j()]);
+                            }
                           }}
                         >
                           <div class="border rounded-full bg-back-subtle m-2 w-4 h-4"></div>
@@ -430,7 +435,6 @@ export function Node(props: NodeProps) {
                   const coords = toCanvasCoords(e.clientX, e.clientY);
                   setHandleCoords(coords);
 
-                  setGhostHead(props.id);
                   onPointerDownTail(props.id, null);
                 }}
               >
