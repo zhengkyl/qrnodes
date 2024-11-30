@@ -12,6 +12,7 @@ import { useNodesContext } from "./context/NodesContext";
 import { Node, type InputPathKey } from "./Node";
 import type { NodeInfo } from "./nodes/shared";
 import { Toolbox } from "./Toolbar";
+import { NODE_DEFS } from "./nodes/factory";
 
 export type Coords = {
   x: number;
@@ -455,21 +456,29 @@ export function Canvas() {
               <Show when={nodeOrNull()}>
                 {(_node) => {
                   const node = _node();
+                  const nodeDef = NODE_DEFS[node.key];
                   return (
-                    <Index each={Object.values(node.inputs)}>
-                      {(input) => {
-                        // filter() creates a new array, so must use signal
+                    <Index each={Object.keys(node.inputs)}>
+                      {(key) => {
+                        const inputDef = nodeDef.inputsDef[key()];
                         return (
-                          <For each={input()}>
-                            {(field) => (
-                              <Show when={field.from != null}>
-                                <PlacedConnectorTail
-                                  node={node}
-                                  field={field}
-                                />
-                              </Show>
-                            )}
-                          </For>
+                          <Show
+                            when={
+                              inputDef.condition == null ||
+                              inputDef.condition(node)
+                            }
+                          >
+                            <For each={node.inputs[key()]}>
+                              {(field) => (
+                                <Show when={field.from != null}>
+                                  <PlacedConnectorTail
+                                    node={node}
+                                    field={field}
+                                  />
+                                </Show>
+                              )}
+                            </For>
+                          </Show>
                         );
                       }}
                     </Index>

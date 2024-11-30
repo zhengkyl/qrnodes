@@ -1,5 +1,6 @@
 import {
   ApplyFilterNode,
+  CompositeNode,
   DisplacementMapNode,
   FilterNode,
   GaussianBlurNode,
@@ -21,8 +22,12 @@ export const NODE_DEFS = {
   text: TextNode,
   number: NumberNode,
   qrCode: QrNode,
+  //
   render: RenderNode,
   display: DisplayNode,
+  dataUrl: DataUrlNode,
+  absoluteMap: AbsoluteMapNode,
+  //
   filter: FilterNode,
   applyFilter: ApplyFilterNode,
   source: SourceNode,
@@ -30,9 +35,8 @@ export const NODE_DEFS = {
   turbulence: TurbulenceNode,
   displacementMap: DisplacementMapNode,
   image: ImageNode,
-  dataUrl: DataUrlNode,
-  absoluteMap: AbsoluteMapNode,
   merge: MergeNode,
+  composite: CompositeNode,
 };
 
 export const NODE_CONSTRUCTORS: {
@@ -252,6 +256,26 @@ export const NODE_CONSTRUCTORS: {
       inputs: {
         in: [{ value: null }],
         result: [{ value: (id) => `merge_${id}` }],
+      },
+      output: {
+        value: null,
+      },
+    }),
+  composite: ({ id, x, y }) =>
+    createNode({
+      id,
+      x,
+      y,
+      key: "composite",
+      inputs: {
+        in: [{ value: null }],
+        in2: [{ value: null }],
+        operator: [{ value: "over" }],
+        k1: [{ value: 0 }],
+        k2: [{ value: 0 }],
+        k3: [{ value: 0 }],
+        k4: [{ value: 0 }],
+        result: [{ value: (id) => `composite_${id}` }],
       },
       output: {
         value: null,

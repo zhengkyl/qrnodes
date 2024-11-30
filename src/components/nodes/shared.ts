@@ -17,6 +17,7 @@ export type NodeDef = {
       props?: {
         [key: string]: any;
       };
+      condition?: (node: NodeInfo) => boolean;
     };
   };
   outputDef: {

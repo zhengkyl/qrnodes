@@ -43,6 +43,8 @@ export function Node(props: NodeProps) {
         cy: y - props.y,
       });
     };
+
+    // NOTE: this is smart/deduped? so it will not trigger with same size
     observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const width = entry.borderBoxSize[0].inlineSize;
@@ -52,7 +54,9 @@ export function Node(props: NodeProps) {
 
         Object.entries(props.inputs).forEach(([key, input]) => {
           for (let j = 0; j < input.length; j++) {
-            updateHandlePos(input[j].ref, ["inputs", key, j]);
+            if (input[j].ref != null) {
+              updateHandlePos(input[j].ref, ["inputs", key, j]);
+            }
           }
         });
 
@@ -115,6 +119,8 @@ export function Node(props: NodeProps) {
       if (node.id == fromId) return;
       const inputsDef = NODE_DEFS[nodes[node.id]!.key].inputsDef;
       Object.entries(node.inputs).forEach(([key, input]) => {
+        const condition = inputsDef[key].condition;
+        if (condition != null && !condition(node)) return;
         if (inputsDef[key].type !== validType) return;
         input.forEach((field, j) => {
           if (field.from != null) return;
@@ -167,9 +173,9 @@ export function Node(props: NodeProps) {
         setFieldFrom(toPath, fromId);
       } else {
         if (toPath == null) return;
+        setFieldNull(toPath);
         toPath = null;
         setGhostTail(null);
-        setFieldNull(toPath);
       }
     };
 
@@ -341,80 +347,100 @@ export function Node(props: NodeProps) {
           {([key, input]) => {
             const inputDef = nodeDef.inputsDef[key];
             return (
-              <div>
-                <div class="select-none text-sm leading-none pb-1">
-                  {inputDef.label}
-                </div>
-                <For each={input}>
-                  {(field, j) => {
-                    return (
-                      <div class="flex items-center pb-2">
-                        <div
-                          ref={(ref) => {
-                            setNodes(props.id, "inputs", key, j(), "ref", ref);
-                          }}
-                          class="absolute -left-4 w-8 h-8"
-                          onPointerDown={(e) => {
-                            e.preventDefault(); // don't trigger img drag
-                            e.stopImmediatePropagation();
-                            const coords = toCanvasCoords(e.clientX, e.clientY);
-                            setHandleCoords(coords);
-
-                            if (field.from != null) {
-                              onPointerDownTail(field.from, [
+              <Show
+                when={inputDef.condition == null || inputDef.condition(props)}
+              >
+                <div>
+                  <div class="select-none text-sm leading-none pb-1">
+                    {inputDef.label}
+                  </div>
+                  <For each={input}>
+                    {(field, j) => {
+                      return (
+                        <div class="flex items-center pb-2">
+                          <div
+                            ref={(ref) => {
+                              setNodes(
                                 props.id,
+                                "inputs",
                                 key,
                                 j(),
-                              ]);
-                            } else {
-                              onPointerDownHead(inputDef, [props.id, key, j()]);
+                                "ref",
+                                ref
+                              );
+                            }}
+                            class="absolute -left-4 w-8 h-8"
+                            onPointerDown={(e) => {
+                              e.preventDefault(); // don't trigger img drag
+                              e.stopImmediatePropagation();
+                              const coords = toCanvasCoords(
+                                e.clientX,
+                                e.clientY
+                              );
+                              setHandleCoords(coords);
+
+                              if (field.from != null) {
+                                onPointerDownTail(field.from, [
+                                  props.id,
+                                  key,
+                                  j(),
+                                ]);
+                              } else {
+                                onPointerDownHead(inputDef, [
+                                  props.id,
+                                  key,
+                                  j(),
+                                ]);
+                              }
+                            }}
+                          >
+                            <div class="border rounded-full bg-back-subtle m-2 w-4 h-4"></div>
+                          </div>
+                          <Dynamic
+                            component={INPUT_MAP[inputDef.type] ?? TextInput}
+                            value={
+                              field.from != null
+                                ? nodes[field.from!]!.output.value
+                                : field.value
                             }
-                          }}
-                        >
-                          <div class="border rounded-full bg-back-subtle m-2 w-4 h-4"></div>
-                        </div>
-                        <Dynamic
-                          component={INPUT_MAP[inputDef.type] ?? TextInput}
-                          value={
-                            field.from != null
-                              ? nodes[field.from!]!.output.value
-                              : field.value
-                          }
-                          disabled={inputDef.array || field.from != null}
-                          onValue={
-                            field.from != null
-                              ? null
-                              : (v) => {
-                                  const fi = j();
-                                  setNodes(
-                                    props.id,
-                                    "inputs",
-                                    key,
-                                    fi,
-                                    "value",
-                                    v
-                                  );
-                                  if (
-                                    inputDef.array &&
-                                    fi === input.length - 1
-                                  ) {
+                            disabled={inputDef.array || field.from != null}
+                            onValue={
+                              field.from != null
+                                ? null
+                                : (value) => {
+                                    const fi = j();
                                     setNodes(
                                       props.id,
                                       "inputs",
                                       key,
-                                      fi + 1,
-                                      {}
+                                      fi,
+                                      "value",
+                                      value
                                     );
+                                    if (
+                                      inputDef.array &&
+                                      fi === input.length - 1
+                                    ) {
+                                      setNodes(
+                                        props.id,
+                                        "inputs",
+                                        key,
+                                        fi + 1,
+                                        {
+                                          value: null,
+                                        }
+                                      );
+                                    }
                                   }
-                                }
-                          }
-                          {...inputDef.props}
-                        />
-                      </div>
-                    );
-                  }}
-                </For>
-              </div>
+                            }
+                            {...inputDef.props}
+                          />
+                        </div>
+                      );
+                    }}
+                  </For>
+                </div>
+              </Show>
             );
           }}
         </For>

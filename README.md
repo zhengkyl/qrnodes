@@ -6,8 +6,6 @@ node-based editor for QR codes
 
 ## Todo
 
-- text selected by select box in chrome (preventDefault breaks input focus events)
-- allow reorder array inputs
 - x y number inputs
 
 ## Inspiration

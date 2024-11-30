@@ -20,6 +20,7 @@ const FILTER_KEYS: (keyof typeof NODE_DEFS)[] = [
   "displacementMap",
   "image",
   "merge",
+  "composite",
 ];
 
 export function Toolbox(props) {

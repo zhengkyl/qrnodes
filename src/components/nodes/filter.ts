@@ -326,6 +326,79 @@ export const MergeNode = {
   },
 } satisfies NodeDef;
 
+export const CompositeNode = {
+  title: "Composite",
+  inputsDef: {
+    in: {
+      type: "hast_fe",
+      label: "in",
+    },
+    in2: {
+      type: "hast_fe",
+      label: "in2",
+    },
+    operator: {
+      type: "select",
+      label: "operator",
+      props: {
+        options: ["over", "in", "out", "atop", "xor", "lighter", "arithmetic"],
+      },
+    },
+    k1: {
+      type: "number",
+      label: "k1",
+      condition: (node) => node.inputs.operator[0].value === "arithmetic",
+    },
+    k2: {
+      type: "number",
+      label: "k2",
+      condition: (node) => node.inputs.operator[0].value === "arithmetic",
+    },
+    k3: {
+      type: "number",
+      label: "k3",
+      condition: (node) => node.inputs.operator[0].value === "arithmetic",
+    },
+    k4: {
+      type: "number",
+      label: "k4",
+      condition: (node) => node.inputs.operator[0].value === "arithmetic",
+    },
+    result: {
+      type: "string",
+      label: "result",
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+  },
+  function: (inputs) => {
+    const in1 = inputs.in ?? { name: undefined, effects: [] };
+    const in2 = inputs.in2 ?? { name: undefined, effects: [] };
+    const props =
+      inputs.operator === "arithmetic"
+        ? {
+            ...inputs,
+            in: in1.name,
+            in2: in2.name,
+          }
+        : {
+            in: in1.name,
+            in2: in2.name,
+            operator: inputs.operator,
+            result: inputs.result,
+          };
+    return {
+      name: inputs.result,
+      effects: [
+        ...dedupedEffects([...in1.effects, ...in2.effects]),
+        s("feComposite", props),
+      ],
+    };
+  },
+} satisfies NodeDef;
+
 function removeDefaults(inputs, defaults) {
   const nonDefault = {};
   Object.keys(inputs).forEach((key) => {
