@@ -16,7 +16,7 @@ import {
   DisplayNode,
   RenderNode,
 } from "./render";
-import type { NodeInfo } from "./shared";
+import type { InputType, NodeInfo } from "./shared";
 
 export const NODE_DEFS = {
   text: TextNode,
@@ -39,296 +39,60 @@ export const NODE_DEFS = {
   composite: CompositeNode,
 };
 
-export const NODE_CONSTRUCTORS: {
-  [key in keyof typeof NODE_DEFS]: (coords: {
-    id: number;
-    x: number;
-    y: number;
-  }) => NodeInfo;
-} = {
-  /** Input nodes */
-  text: ({ id, x, y }) =>
-    createNode({
-      id,
-      x,
-      y,
-      key: "text",
-      inputs: {},
-      output: {
-        value: "",
-      },
-    }),
-  number: ({ id, x, y }) =>
-    createNode({
-      id,
-      x,
-      y,
-      key: "number",
-      inputs: {},
-      output: {
-        value: 0,
-      },
-    }),
-  qrCode: ({ id, x, y }) =>
-    createNode({
-      id,
-      x,
-      y,
-      key: "qrCode",
-      inputs: {
-        text: [{ value: "hello there" }],
-        minVersion: [{ value: 1 }],
-        minEcl: [{ value: "Low" }],
-        mask: [{ value: "Auto" }],
-      },
-      output: {
-        value: null,
-      },
-    }),
-  /** Render nodes */
-  render: ({ id, x, y }) =>
-    createNode({
-      id,
-      x,
-      y,
-      key: "render",
-      inputs: {
-        qrCode: [{ value: null }],
-      },
-      output: {
-        value: null,
-      },
-    }),
-  absoluteMap: ({ id, x, y }) =>
-    createNode({
-      id,
-      x,
-      y,
-      key: "absoluteMap",
-      inputs: {
-        xColor: [{ value: "red" }],
-        yColor: [{ value: "blue" }],
-      },
-      output: {
-        value: null,
-      },
-    }),
-  dataUrl: ({ id, x, y }) =>
-    createNode({
-      id,
-      x,
-      y,
-      key: "dataUrl",
-      inputs: {
-        hast: [{ value: null }],
-      },
-      output: {
-        value: null,
-      },
-    }),
-  display: ({ id, x, y }) =>
-    createNode({
-      id,
-      x,
-      y,
-      key: "display",
-      inputs: {
-        hast: [{ value: null }],
-      },
-      output: {
-        value: null,
-      },
-    }),
-  /** Filter nodes */
-  filter: ({ id, x, y }) =>
-    createNode({
-      id,
-      x,
-      y,
-      key: "filter",
-      inputs: {
-        id: [{ value: (id) => `filter_${id}` }],
-        results: [{ value: null }],
-      },
-      output: {
-        value: null,
-      },
-    }),
-  applyFilter: ({ id, x, y }) =>
-    createNode({
-      id,
-      x,
-      y,
-      key: "applyFilter",
-      inputs: {
-        svg: [{ value: null }],
-        filter: [{ value: null }],
-      },
-      output: {
-        value: null,
-      },
-    }),
-  source: ({ id, x, y }) =>
-    createNode({
-      id,
-      x,
-      y,
-      key: "source",
-      inputs: {
-        name: [{ value: "SourceGraphic" }],
-      },
-      output: {
-        value: null,
-      },
-    }),
-  gaussianBlur: ({ id, x, y }) =>
-    createNode({
-      id,
-      x,
-      y,
-      key: "gaussianBlur",
-      inputs: {
-        in: [{ value: null }],
-        stdDeviation: [{ value: 0.5 }],
-        edgeMode: [{ value: "duplicate" }],
-        result: [{ value: (id) => `gaussianBlur_${id}` }],
-      },
-      output: {
-        value: null,
-      },
-    }),
-  turbulence: ({ id, x, y }) =>
-    createNode({
-      id,
-      x,
-      y,
-      key: "turbulence",
-      inputs: {
-        type: [{ value: "turbulence" }],
-        baseFrequency: [{ value: 0.2 }],
-        numOctaves: [{ value: 1 }],
-        seed: [{ value: 0 }],
-        stitchTiles: [{ value: "noStitch" }],
-        result: [{ value: (id) => `turbulence_${id}` }],
-      },
-      output: {
-        value: null,
-      },
-    }),
-  displacementMap: ({ id, x, y }) =>
-    createNode({
-      id,
-      x,
-      y,
-      key: "displacementMap",
-      inputs: {
-        in: [{ value: null }],
-        in2: [{ value: null }],
-        scale: [{ value: 1.5 }],
-        xChannelSelector: [{ value: "A" }],
-        yChannelSelector: [{ value: "A" }],
-        result: [{ value: (id) => `displacementMap_${id}` }],
-      },
-      output: {
-        value: null,
-      },
-    }),
-  image: ({ id, x, y }) =>
-    createNode({
-      id,
-      x,
-      y,
-      key: "image",
-      inputs: {
-        href: [{ value: "" }],
-        result: [{ value: (id) => `image_${id}` }],
-      },
-      output: {
-        value: null,
-      },
-    }),
-  merge: ({ id, x, y }) =>
-    createNode({
-      id,
-      x,
-      y,
-      key: "merge",
-      inputs: {
-        in: [{ value: null }],
-        result: [{ value: (id) => `merge_${id}` }],
-      },
-      output: {
-        value: null,
-      },
-    }),
-  composite: ({ id, x, y }) =>
-    createNode({
-      id,
-      x,
-      y,
-      key: "composite",
-      inputs: {
-        in: [{ value: null }],
-        in2: [{ value: null }],
-        operator: [{ value: "over" }],
-        k1: [{ value: 0 }],
-        k2: [{ value: 0 }],
-        k3: [{ value: 0 }],
-        k4: [{ value: 0 }],
-        result: [{ value: (id) => `composite_${id}` }],
-      },
-      output: {
-        value: null,
-      },
-    }),
-};
-
-type NodeInfoBase<T extends keyof typeof NODE_DEFS> = {
+type NodeInfoBase = {
   id: number;
-  key: T;
+  key: keyof typeof NODE_DEFS;
   x: number;
   y: number;
-  inputs: {
-    [key in keyof (typeof NODE_DEFS)[T]["inputsDef"]]: [
-      {
-        value: any; // depends on type
-      }
-    ];
-  };
-  output: {
-    value: any; // depends on type
-  };
 };
 
-export function createNode<T extends keyof typeof NODE_DEFS>(
-  base: NodeInfoBase<T>
-): NodeInfo {
-  const node = {
-    id: base.id,
-    key: base.key,
-    x: base.x,
-    y: base.y,
-    width: 0,
-    height: 0,
-    inputs: base.inputs,
-    output: base.output,
-  } as unknown as NodeInfo;
+export function createNode(base: NodeInfoBase): NodeInfo {
+  const nodeDef = NODE_DEFS[base.key];
+  const node = base as unknown as NodeInfo;
+  node.width = 0;
+  node.height = 0;
+  node.inputs = {};
 
-  Object.values(node.inputs).forEach((input) => {
-    input.forEach((field) => {
-      if (typeof field.value === "function") {
-        field.value = field.value(node.id);
+  Object.entries(nodeDef.inputsDef).forEach(([key, inputDef]) => {
+    const initialValue = inputDef.initialValue;
+    let value;
+    if (initialValue === undefined) {
+      if (key === "select") {
+        value = inputDef.props.options[0];
+      } else {
+        value = IMPLICIT_INITIAL_VALUE[key];
       }
-      field.from = null;
-      field.cx = 0;
-      field.cy = 0;
-      field.ref = null!;
-    });
+    } else if (typeof initialValue === "function") {
+      value = initialValue(base.id);
+    } else {
+      value = initialValue;
+    }
+    node.inputs[key] = [
+      {
+        value,
+        from: null,
+        cx: 0,
+        cy: 0,
+        ref: null!,
+      },
+    ];
   });
 
-  node.output.cx = 0;
-  node.output.cx = 0;
-  node.output.ref = null!;
+  node.output = {
+    value: null,
+    cx: 0,
+    cy: 0,
+    ref: null!,
+  };
 
   return node;
 }
+
+const IMPLICIT_INITIAL_VALUE: { [k in Exclude<InputType, "select">]: any } = {
+  string: "",
+  number: 0,
+  qrCode: null,
+  hast: null,
+  hast_fe: null,
+  hast_filter: null,
+};

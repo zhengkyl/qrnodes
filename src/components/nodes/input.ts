@@ -37,6 +37,7 @@ export const QrNode = {
       props: {
         placeholder: "Enter text...",
       },
+      initialValue: "hello there",
     },
     minVersion: {
       type: "number",
@@ -45,6 +46,7 @@ export const QrNode = {
         min: 1,
         max: 40,
       },
+      initialValue: 1,
     },
     minEcl: {
       type: "select",

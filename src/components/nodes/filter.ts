@@ -7,6 +7,7 @@ export const FilterNode = {
     id: {
       type: "string",
       label: "id",
+      initialValue: (id) => `filter_${id}`,
     },
     results: {
       type: "hast_fe",
@@ -74,6 +75,7 @@ export const SourceNode = {
     name: {
       type: "string",
       label: "name",
+      initialValue: "SourceGraphic",
     },
   },
   outputDef: {
@@ -101,6 +103,7 @@ export const GaussianBlurNode = {
       props: {
         step: 0.1,
       },
+      initialValue: 0.5,
     },
     edgeMode: {
       type: "select",
@@ -112,6 +115,7 @@ export const GaussianBlurNode = {
     result: {
       type: "string",
       label: "result",
+      initialValue: (id) => `gaussianBlur_${id}`,
     },
   },
   outputDef: {
@@ -158,10 +162,12 @@ export const TurbulenceNode = {
       props: {
         step: 0.01,
       },
+      initialValue: 0.2,
     },
     numOctaves: {
       type: "number",
       label: "numOctaves",
+      initialValue: 1,
     },
     seed: {
       type: "number",
@@ -177,6 +183,7 @@ export const TurbulenceNode = {
     result: {
       type: "string",
       label: "result",
+      initialValue: (id) => `turbulence_${id}`,
     },
   },
   outputDef: {
@@ -237,6 +244,7 @@ export const DisplacementMapNode = {
     result: {
       type: "string",
       label: "result",
+      initialValue: (id) => `displacementMap_${id}`,
     },
   },
   outputDef: {
@@ -281,6 +289,7 @@ export const ImageNode = {
     result: {
       type: "string",
       label: "result",
+      initialValue: (id) => `image_${id}`,
     },
   },
   outputDef: {
@@ -306,6 +315,7 @@ export const MergeNode = {
     result: {
       type: "string",
       label: "result",
+      initialValue: (id) => `merge_${id}`,
     },
   },
   outputDef: {
@@ -367,6 +377,7 @@ export const CompositeNode = {
     result: {
       type: "string",
       label: "result",
+      initialValue: (id) => `composite_${id}`,
     },
   },
   outputDef: {

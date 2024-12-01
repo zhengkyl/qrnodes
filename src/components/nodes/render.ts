@@ -51,10 +51,12 @@ export const AbsoluteMapNode = {
     xColor: {
       type: "string",
       label: "X color",
+      initialValue: "#ff0000",
     },
     yColor: {
       type: "string",
       label: "Y color",
+      initialValue: "#0000ff",
     },
   },
   outputDef: {

@@ -1,4 +1,4 @@
-type InputType =
+export type InputType =
   | "string"
   | "number"
   | "qrCode"
@@ -17,6 +17,7 @@ export type NodeDef = {
       props?: {
         [key: string]: any;
       };
+      initialValue?: any;
       condition?: (node: NodeInfo) => boolean;
     };
   };

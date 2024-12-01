@@ -1,7 +1,7 @@
 import { createSignal, For, Show } from "solid-js";
 import { useNodesContext } from "./context/NodesContext";
 import { containsPoint } from "../util/rect";
-import { NODE_CONSTRUCTORS, NODE_DEFS } from "./nodes/factory";
+import { createNode, NODE_DEFS } from "./nodes/factory";
 import { useCanvasContext, type Coords } from "./Canvas";
 
 const INPUT_KEYS: (keyof typeof NODE_DEFS)[] = ["text", "number", "qrCode"];
@@ -35,7 +35,7 @@ export function Toolbox(props) {
   let babyOffsetX;
   let babyOffsetY;
 
-  const onPointerDownBaby = (key, func) => (e) => {
+  const onPointerDownBaby = (e, key) => {
     babyOffsetX = e.offsetX;
     babyOffsetY = e.offsetY;
 
@@ -59,8 +59,9 @@ export function Toolbox(props) {
         !containsPoint(toolRect, e.clientX, e.clientY)
       ) {
         const { x, y } = toCanvasCoords(e.clientX, e.clientY);
-        const node = func({
+        const node = createNode({
           id: nextNodeId(),
+          key,
           x: x - babyOffsetX,
           y: y - babyOffsetY,
         });
@@ -95,7 +96,7 @@ export function Toolbox(props) {
             return (
               <div
                 class="p-3.5 border leading-none font-bold text-sm w-49"
-                onPointerDown={onPointerDownBaby(key, NODE_CONSTRUCTORS[key])}
+                onPointerDown={(e) => onPointerDownBaby(e, key)}
               >
                 {NODE_DEFS[key].title}
               </div>
@@ -108,7 +109,7 @@ export function Toolbox(props) {
             return (
               <div
                 class="p-3.5 border leading-none font-bold text-sm w-49"
-                onPointerDown={onPointerDownBaby(key, NODE_CONSTRUCTORS[key])}
+                onPointerDown={(e) => onPointerDownBaby(e, key)}
               >
                 {NODE_DEFS[key].title}
               </div>
@@ -121,7 +122,7 @@ export function Toolbox(props) {
             return (
               <div
                 class="p-3.5 border leading-none font-bold text-sm w-49"
-                onPointerDown={onPointerDownBaby(key, NODE_CONSTRUCTORS[key])}
+                onPointerDown={(e) => onPointerDownBaby(e, key)}
               >
                 {NODE_DEFS[key].title}
               </div>
