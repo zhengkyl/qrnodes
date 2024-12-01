@@ -5,7 +5,8 @@ export type InputType =
   | "select"
   | "hast"
   | "hast_fe"
-  | "hast_filter";
+  | "hast_filter"
+  | "color_matrix";
 
 export type NodeDef = {
   title: string;

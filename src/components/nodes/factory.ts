@@ -1,5 +1,6 @@
 import {
   ApplyFilterNode,
+  ColorMatrixNode,
   CompositeNode,
   DisplacementMapNode,
   FilterNode,
@@ -37,6 +38,7 @@ export const NODE_DEFS = {
   image: ImageNode,
   merge: MergeNode,
   composite: CompositeNode,
+  colorMatrix: ColorMatrixNode,
 };
 
 type NodeInfoBase = {
@@ -53,14 +55,15 @@ export function createNode(base: NodeInfoBase): NodeInfo {
   node.height = 0;
   node.inputs = {};
 
-  Object.entries(nodeDef.inputsDef).forEach(([key, inputDef]) => {
+  const entries = Object.entries(nodeDef.inputsDef);
+  entries.forEach(([key, inputDef]) => {
     const initialValue = inputDef.initialValue;
     let value;
     if (initialValue === undefined) {
-      if (key === "select") {
+      if (inputDef.type === "select") {
         value = inputDef.props.options[0];
       } else {
-        value = IMPLICIT_INITIAL_VALUE[key];
+        value = IMPLICIT_INITIAL_VALUE[inputDef.type];
       }
     } else if (typeof initialValue === "function") {
       value = initialValue(base.id);
@@ -79,7 +82,7 @@ export function createNode(base: NodeInfoBase): NodeInfo {
   });
 
   node.output = {
-    value: null,
+    value: entries.length === 0 ? nodeDef.function({}) : null,
     cx: 0,
     cy: 0,
     ref: null!,
@@ -88,7 +91,9 @@ export function createNode(base: NodeInfoBase): NodeInfo {
   return node;
 }
 
-const IMPLICIT_INITIAL_VALUE: { [k in Exclude<InputType, "select">]: any } = {
+const IMPLICIT_INITIAL_VALUE: {
+  [k in Exclude<InputType, "select" | "color_matrix">]: any;
+} = {
   string: "",
   number: 0,
   qrCode: null,

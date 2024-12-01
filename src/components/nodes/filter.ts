@@ -73,9 +73,18 @@ export const SourceNode = {
   title: "Source",
   inputsDef: {
     name: {
-      type: "string",
+      type: "select",
       label: "name",
-      initialValue: "SourceGraphic",
+      props: {
+        options: [
+          "SourceGraphic",
+          "SourceAlpha",
+          "BackgroundImage",
+          "BackgroundAlpha",
+          "FillPaint",
+          "StrokePaint",
+        ],
+      },
     },
   },
   outputDef: {
@@ -406,6 +415,79 @@ export const CompositeNode = {
         ...dedupedEffects([...in1.effects, ...in2.effects]),
         s("feComposite", props),
       ],
+    };
+  },
+} satisfies NodeDef;
+
+export const ColorMatrixNode = {
+  title: "Color Matrix",
+  inputsDef: {
+    in: {
+      type: "hast_fe",
+      label: "in",
+    },
+    type: {
+      type: "select",
+      label: "type",
+      props: {
+        options: ["matrix", "saturate", "hueRotate", "luminanceToAlpha"],
+      },
+    },
+    matrix: {
+      type: "color_matrix",
+      label: "values",
+      // prettier-ignore
+      initialValue: [
+        1, 0, 0, 0, 0,
+        0, 1, 0, 0, 0,
+        0, 0, 1, 0, 0,
+        0, 0, 0, 1, 0,
+      ],
+      condition: (node) => node.inputs.type[0].value === "matrix",
+    },
+    saturate: {
+      type: "number",
+      label: "values",
+      initialValue: 1,
+      condition: (node) => node.inputs.type[0].value === "saturate",
+    },
+    hueRotate: {
+      type: "number",
+      label: "values",
+      props: {
+        min: 0,
+        max: 360,
+      },
+      condition: (node) => node.inputs.type[0].value === "hueRotate",
+    },
+    result: {
+      type: "string",
+      label: "result",
+      initialValue: (id) => `colorMatrix_${id}`,
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+  },
+  function: (inputs) => {
+    const in1 = inputs.in ?? { name: undefined, effects: [] };
+    const props = {
+      in: in1.name,
+      type: inputs.type,
+      values: undefined,
+      result: inputs.result,
+    };
+    if (inputs.type === "matrix") {
+      props.values = inputs.matrix.join(" ");
+    } else if (inputs.type === "saturate") {
+      props.values = inputs.saturate;
+    } else if (inputs.type === "hueRotate") {
+      props.values = inputs.hueRotate;
+    }
+    return {
+      name: inputs.result,
+      effects: [...in1.effects, s("feColorMatrix", props)],
     };
   },
 } satisfies NodeDef;

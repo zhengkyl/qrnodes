@@ -21,6 +21,7 @@ const FILTER_KEYS: (keyof typeof NODE_DEFS)[] = [
   "image",
   "merge",
   "composite",
+  "colorMatrix",
 ];
 
 export function Toolbox(props) {

@@ -10,6 +10,7 @@ import { produce, unwrap } from "solid-js/store";
 import type { NodeDef, NodeInfo } from "./nodes/shared";
 import { NODE_DEFS } from "./nodes/factory";
 import { FilterInput } from "./ui/FilterInputs";
+import { ColorMatrixInput } from "./ui/ColorMatrixInput";
 
 type NodeProps = NodeInfo;
 
@@ -507,4 +508,5 @@ const INPUT_MAP = {
   number: NumberInput,
   select: Select,
   hast_fe: FilterInput,
+  color_matrix: ColorMatrixInput,
 };
