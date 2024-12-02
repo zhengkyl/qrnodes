@@ -169,7 +169,7 @@ export const TurbulenceNode = {
       type: "number",
       label: "baseFrequency",
       props: {
-        step: 0.01,
+        step: 0.001,
       },
       initialValue: 0.2,
     },
@@ -177,6 +177,9 @@ export const TurbulenceNode = {
       type: "number",
       label: "numOctaves",
       initialValue: 1,
+      props: {
+        min: 1,
+      },
     },
     seed: {
       type: "number",
@@ -219,7 +222,7 @@ export const TurbulenceNode = {
 } satisfies NodeDef;
 
 export const DisplacementMapNode = {
-  title: "DisplacementMap",
+  title: "Displacement Map",
   inputsDef: {
     in: {
       type: "hast_fe",

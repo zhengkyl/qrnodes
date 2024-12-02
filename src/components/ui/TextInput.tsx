@@ -15,7 +15,7 @@ export function TextInput(props: InputProps) {
       type="text"
       class={`${
         local.class ?? ""
-      } min-w-48 w-full bg-back-subtle leading-tight px-3 py-2 rounded-md border focus:(outline-none ring-2 ring-fore-base ring-offset-2 ring-offset-back-base)`}
+      } min-w-48 w-full bg-back-subtle text-sm leading-tight px-3 py-2 rounded-md border focus:(outline-none ring-2 ring-fore-base ring-offset-2 ring-offset-back-base)`}
       onInput={(e) => {
         local.onInput?.(e);
         local.onValue?.(e.target.value);

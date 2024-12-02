@@ -409,6 +409,7 @@ export function Canvas() {
           }));
           setCanvasScale(newScale);
         } else {
+          if (panning()) return;
           let dx = e.deltaX;
           let dy = e.deltaY;
           if (e.shiftKey) {

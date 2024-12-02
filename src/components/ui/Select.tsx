@@ -77,7 +77,7 @@ export function Select(props: Props) {
         </KSelect.Item>
       )}
     >
-      <KSelect.Trigger class="leading-tight w-full inline-flex justify-between items-center gap-1 rounded-md border pl-3 pr-2 py-2 focus:(outline-none ring-2 ring-fore-base ring-offset-2 ring-offset-back-base)">
+      <KSelect.Trigger class="text-sm leading-tight w-full inline-flex justify-between items-center gap-1 rounded-md border pl-3 pr-2 py-2 focus:(outline-none ring-2 ring-fore-base ring-offset-2 ring-offset-back-base)">
         <KSelect.Value>
           {(state) => state.selectedOption() as string}
         </KSelect.Value>

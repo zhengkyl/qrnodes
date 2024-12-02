@@ -2,7 +2,7 @@ import { batch, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useCanvasContext } from "./Canvas";
 import { useNodesContext } from "./context/NodesContext";
-import { NumberInput } from "./ui/NumberInput";
+import { NumberInput, SliderNumberInput } from "./ui/NumberInput";
 import { TextInput } from "./ui/TextInput";
 import { Select } from "./ui/Select";
 import { equal } from "../util/path";
@@ -505,7 +505,7 @@ function DisplayOutput(props) {
 
 const INPUT_MAP = {
   string: TextInput,
-  number: NumberInput,
+  number: SliderNumberInput,
   select: Select,
   hast_fe: FilterInput,
   color_matrix: ColorMatrixInput,

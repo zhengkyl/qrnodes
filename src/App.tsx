@@ -62,7 +62,7 @@ function AppWithContext() {
                 }
 
                 if (typeof v === "number") {
-                  return Number.isInteger(v) ? v : Number(v.toFixed(2));
+                  return Number.isInteger(v) ? v : Number(v.toFixed(3));
                 }
                 return v;
               })
