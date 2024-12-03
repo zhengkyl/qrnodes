@@ -3,6 +3,8 @@ import { useNodesContext } from "./context/NodesContext";
 import { containsPoint } from "../util/rect";
 import { createNode, NODE_DEFS } from "./nodes/factory";
 import { useCanvasContext, type Coords } from "./Canvas";
+import ArrowLeftToLine from "lucide-solid/icons/arrow-left-to-line";
+import ArrowRightToLine from "lucide-solid/icons/arrow-right-to-line";
 
 const INPUT_KEYS: (keyof typeof NODE_DEFS)[] = ["text", "number", "qrCode"];
 const RENDER_KEYS: (keyof typeof NODE_DEFS)[] = [
@@ -79,70 +81,90 @@ export function Toolbox(props) {
     document.addEventListener("pointerup", onRelease);
   };
 
+  const [collapsed, setCollapsed] = createSignal(false);
+
   return (
-    <div
-      ref={toolbox!}
-      class="absolute p-2 z-50 select-none max-h-full overflow-y-auto"
-      onPointerDown={(e) => {
-        e.stopImmediatePropagation();
-      }}
-      onWheel={(e) => {
-        e.stopImmediatePropagation();
-      }}
-    >
-      <div class="bg-back-subtle border flex flex-col gap-1 p-2">
-        <div class="leading-none font-bold pb-2">Inputs</div>
-        <For each={INPUT_KEYS}>
-          {(key) => {
-            return (
-              <div
-                class="p-3.5 border leading-none font-bold text-sm w-49"
-                onPointerDown={(e) => onPointerDownBaby(e, key)}
-              >
-                {NODE_DEFS[key].title}
-              </div>
-            );
-          }}
-        </For>
-        <div class="leading-none font-bold py-2">Renderers</div>
-        <For each={RENDER_KEYS}>
-          {(key) => {
-            return (
-              <div
-                class="p-3.5 border leading-none font-bold text-sm w-49"
-                onPointerDown={(e) => onPointerDownBaby(e, key)}
-              >
-                {NODE_DEFS[key].title}
-              </div>
-            );
-          }}
-        </For>
-        <div class="leading-none font-bold py-2">Filter Effects</div>
-        <For each={FILTER_KEYS}>
-          {(key) => {
-            return (
-              <div
-                class="p-3.5 border leading-none font-bold text-sm w-49"
-                onPointerDown={(e) => onPointerDownBaby(e, key)}
-              >
-                {NODE_DEFS[key].title}
-              </div>
-            );
-          }}
-        </For>
-        <Show when={babyPos()}>
-          {(pos) => (
-            <div
-              class="fixed top-0 left-0 p-4 border leading-none font-bold w-56 transition-scale"
-              style={{
-                translate: `${pos().x}px ${pos().y}px`,
-                scale: overToolbox() ? 0.875 : canvasScale(),
-                "transform-origin": `${babyOffsetX}px ${babyOffsetY}px`,
+    <div class="absolute p-2 z-50 select-none h-full">
+      <div
+        ref={toolbox!}
+        class="bg-back-subtle rounded-lg border max-h-full flex flex-col"
+        onPointerDown={(e) => {
+          e.stopImmediatePropagation();
+        }}
+        onWheel={(e) => {
+          e.stopImmediatePropagation();
+        }}
+      >
+        <div class="flex justify-between items-center gap-2 px-2 py-1">
+          <div class="font-bold">Toolbox</div>
+          <button
+            class="p-1 focus-visible:(ring-2 ring-fore-base ring-offset-2 ring-offset-back-base outline-none)"
+            onClick={() => setCollapsed((prev) => !prev)}
+          >
+            <Show when={collapsed()} fallback={<ArrowLeftToLine size={20} />}>
+              <ArrowRightToLine size={20} />
+            </Show>
+          </button>
+        </div>
+        <Show when={!collapsed()}>
+          <hr class="mx-1" />
+          <div class="flex flex-col gap-1 p-2 overflow-y-auto">
+            <div class="leading-none text-xs font-bold py-2">INPUTS</div>
+            <For each={INPUT_KEYS}>
+              {(key) => {
+                return (
+                  <div
+                    class="p-3.5 border leading-none font-bold text-sm w-49"
+                    onPointerDown={(e) => onPointerDownBaby(e, key)}
+                  >
+                    {NODE_DEFS[key].title}
+                  </div>
+                );
               }}
-            >
-              {babyText}
+            </For>
+            <div class="leading-none text-xs font-bold py-2">RENDER</div>
+            <For each={RENDER_KEYS}>
+              {(key) => {
+                return (
+                  <div
+                    class="p-3.5 border leading-none font-bold text-sm w-49"
+                    onPointerDown={(e) => onPointerDownBaby(e, key)}
+                  >
+                    {NODE_DEFS[key].title}
+                  </div>
+                );
+              }}
+            </For>
+            <div class="leading-none text-xs font-bold py-2">
+              FILTER EFFECTS
             </div>
-          )}
+            <For each={FILTER_KEYS}>
+              {(key) => {
+                return (
+                  <div
+                    class="p-3.5 border leading-none font-bold text-sm w-49"
+                    onPointerDown={(e) => onPointerDownBaby(e, key)}
+                  >
+                    {NODE_DEFS[key].title}
+                  </div>
+                );
+              }}
+            </For>
+            <Show when={babyPos()}>
+              {(pos) => (
+                <div
+                  class="fixed top-0 left-0 p-4 border leading-none font-bold w-56 transition-scale"
+                  style={{
+                    translate: `${pos().x}px ${pos().y}px`,
+                    scale: overToolbox() ? 0.875 : canvasScale(),
+                    "transform-origin": `${babyOffsetX}px ${babyOffsetY}px`,
+                  }}
+                >
+                  {babyText}
+                </div>
+              )}
+            </Show>
+          </div>
         </Show>
       </div>
     </div>

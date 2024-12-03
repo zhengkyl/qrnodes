@@ -6,8 +6,6 @@ node-based editor for QR codes
 
 ## Todo
 
-- output from result input
-- collapse toolbar
 - topo sort to prevent loops
 
 ## Inspiration
