@@ -166,12 +166,12 @@ export const TurbulenceNode = {
       },
     },
     baseFrequency: {
-      type: "number",
+      type: "number_pair",
       label: "baseFrequency",
       props: {
         step: 0.001,
       },
-      initialValue: 0.2,
+      initialValue: [0.2, 0.2],
     },
     numOctaves: {
       type: "number",
@@ -203,6 +203,7 @@ export const TurbulenceNode = {
     label: "result",
   },
   function: (inputs) => {
+    inputs.baseFrequency = collapsePair(inputs.baseFrequency);
     return {
       name: inputs.result,
       effects: [
@@ -494,6 +495,15 @@ export const ColorMatrixNode = {
     };
   },
 } satisfies NodeDef;
+
+function collapsePair(pair) {
+  const x = pair[0];
+  const y = pair[1];
+  if (x == y) {
+    return x;
+  }
+  return `${x} ${y}`;
+}
 
 function removeDefaults(inputs, defaults) {
   const nonDefault = {};

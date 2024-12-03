@@ -6,7 +6,7 @@ export const RenderNode = {
   title: "Renderer",
   inputsDef: {
     qrCode: {
-      type: "qrCode",
+      type: "qr_code",
       label: "QR Code",
     },
   },

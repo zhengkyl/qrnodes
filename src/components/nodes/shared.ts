@@ -1,7 +1,8 @@
 export type InputType =
   | "string"
   | "number"
-  | "qrCode"
+  | "number_pair"
+  | "qr_code"
   | "select"
   | "hast"
   | "hast_fe"

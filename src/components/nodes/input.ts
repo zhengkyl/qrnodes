@@ -64,7 +64,7 @@ export const QrNode = {
     },
   },
   outputDef: {
-    type: "qrCode",
+    type: "qr_code",
     label: "QR Code",
   },
   function: (inputs) => {

@@ -2,7 +2,7 @@ import { batch, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useCanvasContext } from "./Canvas";
 import { useNodesContext } from "./context/NodesContext";
-import { NumberInput, SliderNumberInput } from "./ui/NumberInput";
+import { SliderNumberInput, NumberPairInput } from "./ui/NumberInput";
 import { TextInput } from "./ui/TextInput";
 import { Select } from "./ui/Select";
 import { equal } from "../util/path";
@@ -359,44 +359,13 @@ export function Node(props: NodeProps) {
                     {(field, j) => {
                       return (
                         <div class="flex items-center pb-2">
-                          <div
-                            ref={(ref) => {
-                              setNodes(
-                                props.id,
-                                "inputs",
-                                key,
-                                j(),
-                                "ref",
-                                ref
-                              );
-                            }}
-                            class="absolute -left-4 w-8 h-8"
-                            onPointerDown={(e) => {
-                              e.preventDefault(); // don't trigger img drag
-                              e.stopImmediatePropagation();
-                              const coords = toCanvasCoords(
-                                e.clientX,
-                                e.clientY
-                              );
-                              setHandleCoords(coords);
-
-                              if (field.from != null) {
-                                onPointerDownTail(field.from, [
-                                  props.id,
-                                  key,
-                                  j(),
-                                ]);
-                              } else {
-                                onPointerDownHead(inputDef, [
-                                  props.id,
-                                  key,
-                                  j(),
-                                ]);
-                              }
-                            }}
-                          >
-                            <div class="border rounded-full bg-back-subtle m-2 w-4 h-4"></div>
-                          </div>
+                          <InputConnector
+                            path={[props.id, key, j()]}
+                            type={inputDef.type}
+                            field={field}
+                            onPointerDownHead={onPointerDownHead}
+                            onPointerDownTail={onPointerDownTail}
+                          />
                           <Dynamic
                             component={INPUT_MAP[inputDef.type] ?? TextInput}
                             value={
@@ -451,22 +420,10 @@ export function Node(props: NodeProps) {
           </div>
           <div class="flex items-center">
             <Show when={nodeDef.outputDef.type !== "display"}>
-              <div
-                ref={(ref) => {
-                  setNodes(props.id, "output", "ref", ref);
-                }}
-                class="absolute -right-4 w-8 h-8"
-                onPointerDown={(e) => {
-                  e.preventDefault(); // don't trigger img drag
-                  e.stopImmediatePropagation();
-                  const coords = toCanvasCoords(e.clientX, e.clientY);
-                  setHandleCoords(coords);
-
-                  onPointerDownTail(props.id, null);
-                }}
-              >
-                <div class="border bg-back-subtle m-2 w-4 h-4"></div>
-              </div>
+              <OutputConnector
+                id={props.id}
+                onPointerDown={onPointerDownTail}
+              />
             </Show>
             <Show
               when={Object.keys(props.inputs).length}
@@ -494,6 +451,75 @@ export function Node(props: NodeProps) {
   );
 }
 
+type OutputConnectorProps = {
+  id: number;
+  onPointerDown: (id: number, path: null) => void;
+};
+function OutputConnector(props: OutputConnectorProps) {
+  const { setHandleCoords, toCanvasCoords } = useCanvasContext();
+  const { setNodes } = useNodesContext();
+  return (
+    <div
+      ref={(ref) => {
+        setNodes(props.id, "output", "ref", ref);
+      }}
+      class="absolute -right-4 w-8 h-8"
+      onPointerDown={(e) => {
+        e.preventDefault(); // don't trigger img drag
+        e.stopImmediatePropagation();
+        const coords = toCanvasCoords(e.clientX, e.clientY);
+        setHandleCoords(coords);
+
+        props.onPointerDown(props.id, null);
+      }}
+    >
+      <div class="border bg-back-subtle m-2 w-4 h-4"></div>
+    </div>
+  );
+}
+
+type InputConnectorProps = {
+  path: InputPathKey;
+  type: string;
+  field: NodeInfo["inputs"][string][number];
+  onPointerDownHead: (type: string, path: InputPathKey) => void;
+  onPointerDownTail: (fromId: number, path: InputPathKey) => void;
+};
+function InputConnector(props: InputConnectorProps) {
+  const { setHandleCoords, toCanvasCoords } = useCanvasContext();
+  const { setNodes } = useNodesContext();
+
+  return (
+    <div
+      ref={(ref) => {
+        setNodes(
+          props.path[0],
+          "inputs",
+          props.path[1],
+          props.path[2],
+          "ref",
+          ref
+        );
+      }}
+      class="absolute -left-4 w-8 h-8"
+      onPointerDown={(e) => {
+        e.preventDefault(); // don't trigger img drag
+        e.stopImmediatePropagation();
+        const coords = toCanvasCoords(e.clientX, e.clientY);
+        setHandleCoords(coords);
+
+        if (props.field.from != null) {
+          props.onPointerDownTail(props.field.from, props.path);
+        } else {
+          props.onPointerDownHead(props.type, props.path);
+        }
+      }}
+    >
+      <div class="border rounded-full bg-back-subtle m-2 w-4 h-4"></div>
+    </div>
+  );
+}
+
 function DisplayOutput(props) {
   return (
     <div
@@ -506,6 +532,7 @@ function DisplayOutput(props) {
 const INPUT_MAP = {
   string: TextInput,
   number: SliderNumberInput,
+  number_pair: NumberPairInput,
   select: Select,
   hast_fe: FilterInput,
   color_matrix: ColorMatrixInput,

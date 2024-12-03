@@ -96,7 +96,8 @@ const IMPLICIT_INITIAL_VALUE: {
 } = {
   string: "",
   number: 0,
-  qrCode: null,
+  number_pair: [0, 0],
+  qr_code: null,
   hast: null,
   hast_fe: null,
   hast_filter: null,

@@ -2,7 +2,9 @@ import { NumberField } from "@kobalte/core/number-field";
 import Plus from "lucide-solid/icons/plus";
 import Minus from "lucide-solid/icons/minus";
 import MoveHorizontal from "lucide-solid/icons/move-horizontal";
-import { createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
+import Link2 from "lucide-solid/icons/link-2";
+import Unlink2 from "lucide-solid/icons/unlink-2";
 
 type Props = {
   min?: number;
@@ -11,6 +13,7 @@ type Props = {
   disabled?: boolean;
   value: number;
   onValue?: (v: number) => void;
+  halfWidth?: boolean;
 };
 
 export function NumberInput(props: Props) {
@@ -73,10 +76,16 @@ export function SliderNumberInput(props: Props) {
   const decimalDigits = props.step != null ? decimals(props.step) : 0;
 
   return (
-    <div class="relative">
+    <div
+      classList={{
+        "relative w-full": true,
+        "min-w-48": !props.halfWidth,
+        "min-w-12": props.halfWidth,
+      }}
+    >
       <input
         classList={{
-          "min-w-48 w-full text-sm leading-tight border rounded-md pl-3 pr-8 py-2 bg-back-subtle focus:(ring-2 ring-fore-base ring-offset-2 ring-offset-back-base outline-none)":
+          "w-full text-sm leading-tight border rounded-md pl-3 pr-8 py-2 bg-back-subtle focus:(ring-2 ring-fore-base ring-offset-2 ring-offset-back-base outline-none)":
             true,
           "cursor-ew-resize": sliding(),
         }}
@@ -130,6 +139,51 @@ export function SliderNumberInput(props: Props) {
           document.body.style.cursor = "ew-resize";
           setSliding(true);
         }}
+      />
+    </div>
+  );
+}
+
+type PairProps = {
+  min?: number;
+  max?: number;
+  step?: number;
+  value: [number, number];
+  onValue: (pair: [number, number]) => void;
+};
+
+export function NumberPairInput(props: PairProps) {
+  const [linked, setLinked] = createSignal(true);
+  const setPair = (v) => {
+    props.onValue([v, v]);
+  };
+  const setX = (v) => props.onValue([v, props.value[1]]);
+  const setY = (v) => props.onValue([props.value[0], v]);
+  return (
+    <div class="flex gap-1">
+      <SliderNumberInput
+        halfWidth
+        min={props.min}
+        max={props.max}
+        step={props.step}
+        value={props.value[0]}
+        onValue={linked() ? setPair : setX}
+      />
+      <button
+        class="p-1 focus-visible:(ring-2 ring-fore-base ring-offset-2 ring-offset-back-base outline-none)"
+        onClick={() => setLinked((prev) => !prev)}
+      >
+        <Show when={linked()} fallback={<Unlink2 size={16} />}>
+          <Link2 size={16} />
+        </Show>
+      </button>
+      <SliderNumberInput
+        halfWidth
+        min={props.min}
+        max={props.max}
+        step={props.step}
+        value={props.value[1]}
+        onValue={linked() ? setPair : setY}
       />
     </div>
   );
