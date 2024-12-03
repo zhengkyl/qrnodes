@@ -1,4 +1,13 @@
-import { batch, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
+import {
+  batch,
+  createRenderEffect,
+  For,
+  Match,
+  onCleanup,
+  onMount,
+  Show,
+  Switch,
+} from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useCanvasContext } from "./Canvas";
 import { useNodesContext } from "./context/NodesContext";
@@ -208,14 +217,14 @@ export function Node(props: NodeProps) {
     document.addEventListener("pointerup", onReleaseTail);
   };
 
-  const onPointerDownHead = (inputDef, toPath: InputPathKey) => {
+  const onPointerDownHead = (type, toPath: InputPathKey) => {
     setGhostTail(toPath);
 
     const validOutputs = nodes.filter(
       (node) =>
         node != null &&
         node.id !== props.id &&
-        NODE_DEFS[node.key].outputDef.type === inputDef.type
+        NODE_DEFS[node.key].outputDef.type === type
     ) as NodeInfo[];
 
     let fromId: number | null = null;
@@ -268,7 +277,7 @@ export function Node(props: NodeProps) {
     document.addEventListener("pointerup", onReleaseHead);
   };
 
-  const outputValue = () => {
+  createRenderEffect(() => {
     const inputs = {};
     const unwrapNodes = unwrap(nodes);
 
@@ -308,7 +317,10 @@ export function Node(props: NodeProps) {
     );
 
     return output;
-  };
+  });
+
+  // NOTE: inputs has STABLE number of key,value pairs
+  const numInputs = Object.keys(props.inputs).length;
 
   return (
     <div
@@ -345,7 +357,7 @@ export function Node(props: NodeProps) {
           {nodeDef.title}
         </div>
         <For each={Object.entries(props.inputs)}>
-          {([key, input]) => {
+          {([key, input], i) => {
             const inputDef = nodeDef.inputsDef[key];
             return (
               <Show
@@ -359,13 +371,26 @@ export function Node(props: NodeProps) {
                     {(field, j) => {
                       return (
                         <div class="flex items-center pb-2">
-                          <InputConnector
-                            path={[props.id, key, j()]}
-                            type={inputDef.type}
-                            field={field}
-                            onPointerDownHead={onPointerDownHead}
-                            onPointerDownTail={onPointerDownTail}
-                          />
+                          <Show
+                            when={
+                              nodeDef.outputDef.placement === "lastInput" &&
+                              i() === numInputs - 1
+                            }
+                            fallback={
+                              <InputConnector
+                                path={[props.id, key, j()]}
+                                type={inputDef.type}
+                                field={field}
+                                onPointerDownHead={onPointerDownHead}
+                                onPointerDownTail={onPointerDownTail}
+                              />
+                            }
+                          >
+                            <OutputConnector
+                              id={props.id}
+                              onPointerDown={onPointerDownTail}
+                            />
+                          </Show>
                           <Dynamic
                             component={INPUT_MAP[inputDef.type] ?? TextInput}
                             value={
@@ -414,38 +439,26 @@ export function Node(props: NodeProps) {
             );
           }}
         </For>
-        <div>
-          <div class="select-none text-sm leading-none pb-1">
-            {nodeDef.outputDef.label}
-          </div>
-          <div class="flex items-center">
-            <Show when={nodeDef.outputDef.type !== "display"}>
+        <Show when={nodeDef.outputDef.placement == null}>
+          <div>
+            <div class="select-none text-sm leading-none pb-1">
+              {nodeDef.outputDef.label}
+            </div>
+            <div class="flex items-center">
               <OutputConnector
                 id={props.id}
                 onPointerDown={onPointerDownTail}
               />
-            </Show>
-            <Show
-              when={Object.keys(props.inputs).length}
-              fallback={
-                <Dynamic
-                  component={INPUT_MAP[nodeDef.outputDef.type] ?? TextInput}
-                  value={props.output.value}
-                  onValue={(v) => {
-                    setNodes(props.id, "output", "value", v);
-                  }}
-                  {...nodeDef.outputDef.props}
-                />
-              }
-            >
-              <Switch fallback={<TextInput value={outputValue()} disabled />}>
+              <Switch
+                fallback={<TextInput value={props.output.value} disabled />}
+              >
                 <Match when={nodeDef.outputDef.type === "display"}>
-                  <DisplayOutput output={outputValue()} />
+                  <DisplayOutput output={props.output.value} />
                 </Match>
               </Switch>
-            </Show>
+            </div>
           </div>
-        </div>
+        </Show>
       </div>
     </div>
   );
@@ -507,7 +520,6 @@ function InputConnector(props: InputConnectorProps) {
         e.stopImmediatePropagation();
         const coords = toCanvasCoords(e.clientX, e.clientY);
         setHandleCoords(coords);
-
         if (props.field.from != null) {
           props.onPointerDownTail(props.field.from, props.path);
         } else {

@@ -3,28 +3,40 @@ import type { NodeDef } from "./shared";
 
 export const TextNode = {
   title: "Text",
-  inputsDef: {},
-  outputDef: {
-    type: "string",
-    label: "Output",
-    props: {
-      placeholder: "Enter text...",
+  inputsDef: {
+    text: {
+      type: "string",
+      label: "Text",
+      props: {
+        placeholder: "Enter text...",
+      },
     },
   },
-  function: () => {
-    return "";
+  outputDef: {
+    type: "string",
+    label: "",
+    placement: "lastInput",
+  },
+  function: (inputs) => {
+    return inputs.text;
   },
 } satisfies NodeDef;
 
 export const NumberNode = {
   title: "Number",
-  inputsDef: {},
+  inputsDef: {
+    number: {
+      type: "number",
+      label: "Number",
+    },
+  },
   outputDef: {
     type: "number",
-    label: "Output",
+    label: "",
+    placement: "lastInput",
   },
-  function: () => {
-    return 0;
+  function: (inputs) => {
+    return inputs.number;
   },
 } satisfies NodeDef;
 

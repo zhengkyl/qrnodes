@@ -29,6 +29,7 @@ export type NodeDef = {
     props?: {
       [key: string]: any;
     };
+    placement?: "none" | "lastInput";
   };
   function: (inputs: any) => any;
 };

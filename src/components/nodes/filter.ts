@@ -90,6 +90,7 @@ export const SourceNode = {
   outputDef: {
     type: "hast_fe",
     label: "result",
+    placement: "lastInput",
   },
   function: (inputs) => {
     return {
@@ -130,6 +131,7 @@ export const GaussianBlurNode = {
   outputDef: {
     type: "hast_fe",
     label: "Output",
+    placement: "lastInput",
   },
   function: (inputs) => {
     const in1 = inputs.in ?? { name: undefined, effects: [] };
@@ -201,6 +203,7 @@ export const TurbulenceNode = {
   outputDef: {
     type: "hast_fe",
     label: "result",
+    placement: "lastInput",
   },
   function: (inputs) => {
     inputs.baseFrequency = collapsePair(inputs.baseFrequency);
@@ -263,6 +266,7 @@ export const DisplacementMapNode = {
   outputDef: {
     type: "hast_fe",
     label: "Output",
+    placement: "lastInput",
   },
   function: (inputs) => {
     const in1 = inputs.in ?? { name: undefined, effects: [] };
@@ -308,6 +312,7 @@ export const ImageNode = {
   outputDef: {
     type: "hast_fe",
     label: "Output",
+    placement: "lastInput",
   },
   function: (inputs) => {
     return {
@@ -396,6 +401,7 @@ export const CompositeNode = {
   outputDef: {
     type: "hast_fe",
     label: "Output",
+    placement: "lastInput",
   },
   function: (inputs) => {
     const in1 = inputs.in ?? { name: undefined, effects: [] };
@@ -473,6 +479,7 @@ export const ColorMatrixNode = {
   outputDef: {
     type: "hast_fe",
     label: "Output",
+    placement: "lastInput",
   },
   function: (inputs) => {
     const in1 = inputs.in ?? { name: undefined, effects: [] };
