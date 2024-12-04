@@ -1,5 +1,6 @@
 import {
   ApplyFilterNode,
+  BlendNode,
   ColorMatrixNode,
   CompositeNode,
   DisplacementMapNode,
@@ -33,14 +34,27 @@ export const NODE_DEFS = {
   filter: FilterNode,
   applyFilter: ApplyFilterNode,
   source: SourceNode,
-  gaussianBlur: GaussianBlurNode,
-  turbulence: TurbulenceNode,
+  //
+  blend: BlendNode,
+  colorMatrix: ColorMatrixNode,
+  // componentTransfer
+  composite: CompositeNode,
+  // convolveMatrix
   displacementMap: DisplacementMapNode,
+  // dropShadow
+  // flood
+  gaussianBlur: GaussianBlurNode,
   image: ImageNode,
   merge: MergeNode,
-  composite: CompositeNode,
-  colorMatrix: ColorMatrixNode,
   morphology: MorphologyNode,
+  // offset
+  // tile
+  turbulence: TurbulenceNode,
+  // diffuseLighting
+  // specularLighting
+  // distantLight
+  // pointLight
+  // spotLight
 };
 
 type NodeInfoBase = {

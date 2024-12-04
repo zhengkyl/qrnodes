@@ -17,14 +17,28 @@ const FILTER_KEYS: (keyof typeof NODE_DEFS)[] = [
   "filter",
   "applyFilter",
   "source",
-  "gaussianBlur",
-  "turbulence",
+  "blend",
+  "colorMatrix",
+  // componentTransfer
+  "composite",
+  // convolveMatrix
   "displacementMap",
+  // dropShadow
+  // flood
+  "gaussianBlur",
   "image",
   "merge",
-  "composite",
-  "colorMatrix",
   "morphology",
+  // offset
+  // tile
+  "turbulence",
+];
+const LIGHTING_KEYS: (keyof typeof NODE_DEFS)[] = [
+  // diffuseLighting
+  // specularLighting
+  // distantLight
+  // pointLight
+  // spotLight
 ];
 
 export function Toolbox(props) {

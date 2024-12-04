@@ -100,131 +100,8 @@ export const SourceNode = {
   },
 } satisfies NodeDef;
 
-export const GaussianBlurNode = {
-  title: "Gaussian Blur",
-  inputsDef: {
-    in: {
-      type: "hast_fe",
-      label: "in",
-    },
-    stdDeviation: {
-      type: "number",
-      label: "stdDeviation",
-      props: {
-        step: 0.1,
-        min: 0,
-      },
-      initialValue: 0.5,
-    },
-    edgeMode: {
-      type: "select",
-      label: "edgeMode",
-      props: {
-        options: ["duplicate", "wrap", "none"],
-      },
-    },
-    result: {
-      type: "string",
-      label: "result",
-      initialValue: (id) => `gaussianBlur_${id}`,
-    },
-  },
-  outputDef: {
-    type: "hast_fe",
-    label: "Output",
-    placement: "lastInput",
-  },
-  function: (inputs) => {
-    const in1 = inputs.in ?? { name: undefined, effects: [] };
-    inputs.in = in1.name;
-    inputs.stdDeviation = flattenPair(inputs.stdDeviation);
-    return {
-      name: inputs.result,
-      effects: [
-        ...in1.effects,
-        s(
-          "feGaussianBlur",
-          removeDefaults(inputs, {
-            stdDeviation: 0,
-            edgeMode: "duplicate",
-          })
-        ),
-      ],
-    };
-  },
-} satisfies NodeDef;
-
-export const TurbulenceNode = {
-  title: "Turbulence",
-  inputsDef: {
-    type: {
-      type: "select",
-      label: "Type",
-      props: {
-        options: ["turbulence", "fractalNoise"],
-      },
-    },
-    baseFrequency: {
-      type: "number_pair",
-      label: "baseFrequency",
-      props: {
-        step: 0.001,
-      },
-      initialValue: [0.2, 0.2],
-    },
-    numOctaves: {
-      type: "number",
-      label: "numOctaves",
-      initialValue: 1,
-      props: {
-        min: 1,
-      },
-    },
-    seed: {
-      type: "number",
-      label: "seed",
-      initialValue: 1,
-    },
-    stitchTiles: {
-      type: "select",
-      label: "stitchTiles",
-      props: {
-        options: ["noStitch", "stitch"],
-      },
-    },
-    result: {
-      type: "string",
-      label: "result",
-      initialValue: (id) => `turbulence_${id}`,
-    },
-  },
-  outputDef: {
-    type: "hast_fe",
-    label: "result",
-    placement: "lastInput",
-  },
-  function: (inputs) => {
-    inputs.baseFrequency = flattenPair(inputs.baseFrequency);
-    return {
-      name: inputs.result,
-      effects: [
-        s(
-          "feTurbulence",
-          removeDefaults(inputs, {
-            type: "turbulence",
-            baseFrequency: 0,
-            numOctaves: 1,
-            seed: 1,
-            stitchTiles: "noStitch",
-          })
-        ),
-      ],
-    };
-  },
-} satisfies NodeDef;
-
-export const DisplacementMapNode = {
-  title: "Displacement Map",
+export const BlendNode = {
+  title: "Blend",
   inputsDef: {
     in: {
       type: "hast_fe",
@@ -234,31 +111,34 @@ export const DisplacementMapNode = {
       type: "hast_fe",
       label: "in2",
     },
-    scale: {
-      type: "number",
-      label: "scale",
-      props: {
-        step: 0.1,
-      },
-    },
-    xChannelSelector: {
+    mode: {
       type: "select",
-      label: "xChannelSelector",
+      label: "mode",
       props: {
-        options: ["R", "G", "B", "A"],
-      },
-    },
-    yChannelSelector: {
-      type: "select",
-      label: "yChannelSelector",
-      props: {
-        options: ["R", "G", "B", "A"],
+        options: [
+          "normal",
+          "multiply",
+          "screen",
+          "overlay",
+          "darken",
+          "lighten",
+          "color-dodge",
+          "color-burn",
+          "hard-light",
+          "soft-light",
+          "difference",
+          "exclusion",
+          "hue",
+          "saturation",
+          "color",
+          "luminosity",
+        ],
       },
     },
     result: {
       type: "string",
       label: "result",
-      initialValue: (id) => `displacementMap_${id}`,
+      initialValue: (id) => `blend_${id}`,
     },
   },
   outputDef: {
@@ -275,143 +155,7 @@ export const DisplacementMapNode = {
       name: inputs.result,
       effects: [
         ...dedupedEffects([...in1.effects, ...in2.effects]),
-        s(
-          "feDisplacementMap",
-          removeDefaults(inputs, {
-            in2: "",
-            scale: 0,
-            xChannelSelector: "A",
-            yChannelSelector: "A",
-          })
-        ),
-      ],
-    };
-  },
-} satisfies NodeDef;
-
-export const ImageNode = {
-  title: "Image",
-  inputsDef: {
-    href: {
-      type: "string",
-      label: "href",
-    },
-    result: {
-      type: "string",
-      label: "result",
-      initialValue: (id) => `image_${id}`,
-    },
-  },
-  outputDef: {
-    type: "hast_fe",
-    label: "Output",
-    placement: "lastInput",
-  },
-  function: (inputs) => {
-    return {
-      name: inputs.result,
-      effects: [s("feImage", inputs)],
-    };
-  },
-} satisfies NodeDef;
-
-export const MergeNode = {
-  title: "Merge",
-  inputsDef: {
-    in: {
-      type: "hast_fe",
-      label: "in",
-      array: true,
-    },
-    result: {
-      type: "string",
-      label: "result",
-      initialValue: (id) => `merge_${id}`,
-    },
-  },
-  outputDef: {
-    type: "hast_fe",
-    label: "Output",
-  },
-  function: (inputs) => {
-    const mergeIn = inputs.in.filter((v) => v != null);
-    return {
-      name: inputs.result,
-      effects: [
-        ...dedupedEffects(mergeIn.flatMap((result) => result.effects)),
-        s("feMerge", { result: inputs.result }, [
-          ...mergeIn.map((result) => s("feMergeNode", { in: result.name })),
-        ]),
-      ],
-    };
-  },
-} satisfies NodeDef;
-
-export const CompositeNode = {
-  title: "Composite",
-  inputsDef: {
-    in: {
-      type: "hast_fe",
-      label: "in",
-    },
-    in2: {
-      type: "hast_fe",
-      label: "in2",
-    },
-    operator: {
-      type: "select",
-      label: "operator",
-      props: {
-        options: ["over", "in", "out", "atop", "xor", "lighter", "arithmetic"],
-      },
-    },
-    k1: {
-      type: "number",
-      label: "k1",
-      condition: (node) => node.inputs.operator[0].value === "arithmetic",
-    },
-    k2: {
-      type: "number",
-      label: "k2",
-      condition: (node) => node.inputs.operator[0].value === "arithmetic",
-    },
-    k3: {
-      type: "number",
-      label: "k3",
-      condition: (node) => node.inputs.operator[0].value === "arithmetic",
-    },
-    k4: {
-      type: "number",
-      label: "k4",
-      condition: (node) => node.inputs.operator[0].value === "arithmetic",
-    },
-    result: {
-      type: "string",
-      label: "result",
-      initialValue: (id) => `composite_${id}`,
-    },
-  },
-  outputDef: {
-    type: "hast_fe",
-    label: "Output",
-    placement: "lastInput",
-  },
-  function: (inputs) => {
-    const in1 = inputs.in ?? { name: undefined, effects: [] };
-    const in2 = inputs.in2 ?? { name: undefined, effects: [] };
-    inputs.in = in1.name;
-    inputs.in2 = in2.name;
-    if (inputs.operator !== "arithmetic") {
-      delete inputs.k1;
-      delete inputs.k2;
-      delete inputs.k3;
-      delete inputs.k4;
-    }
-    return {
-      name: inputs.result,
-      effects: [
-        ...dedupedEffects([...in1.effects, ...in2.effects]),
-        s("feComposite", inputs),
+        s("feBlend", removeDefaults(inputs, { in2: "", mode: "normal" })),
       ],
     };
   },
@@ -491,6 +235,361 @@ export const ColorMatrixNode = {
   },
 } satisfies NodeDef;
 
+// TODO
+// export const ComponentTransferNode = {
+//   title: "Component Transfer",
+//   inputsDef: {
+//     in: {
+//       type: "hast_fe",
+//       label: "in",
+//     },
+//     type: {
+//       type: "select",
+//       label: "type",
+//       props: {
+//         options: ["identity", "table", "discrete", "linear", "gamma"],
+//       },
+//     },
+//     tableValues: {
+//       type: "table_values",
+//       label: "tableValues",
+//       initialValue: [1, 0, 0, 0],
+//       condition: (node) =>
+//         node.inputs.type[0].value === "table" ||
+//         node.inputs.type[0].value === "discrete",
+//     },
+//     slope: {
+//       type: "number",
+//       label: "slope",
+//       initialValue: 1,
+//       condition: (node) => node.inputs.type[0].value === "linear",
+//     },
+//     intercept: {
+//       type: "number",
+//       label: "",
+//       condition: (node) => node.inputs.type[0].value === "linear",
+//     },
+//     amplitude: {
+//       type: "number",
+//       label: "amplitude",
+//       condition: (node) => node.inputs.type[0].value === "gamma",
+//     },
+//     exponent: {
+//       type: "number",
+//       label: "exponent",
+//       condition: (node) => node.inputs.type[0].value === "gamma",
+//     },
+//     offset: {
+//       type: "number",
+//       label: "offset",
+//       condition: (node) => node.inputs.type[0].value === "gamma",
+//     },
+//     result: {
+//       type: "string",
+//       label: "result",
+//       initialValue: (id) => `componentTransfer_${id}`,
+//     },
+//   },
+//   outputDef: {
+//     type: "hast_fe",
+//     label: "Output",
+//     placement: "lastInput",
+//   },
+//   function: (inputs) => {
+//     const in1 = inputs.in ?? { name: undefined, effects: [] };
+//     const props = {
+//       in: in1.name,
+//       type: inputs.type,
+//       result: inputs.result,
+//     } as any;
+//     switch (inputs.type) {
+//       case "discrete":
+//       case "table": {
+//         props.tableValues = inputs.tableValues.join(" ");
+//         break;
+//       }
+//       case "linear": {
+//         props.slope = inputs.slope;
+//         props.intercept = inputs.intercept;
+//         break;
+//       }
+//       case "gamma": {
+//         props.amplitude = inputs.amplitude;
+//         props.exponent = inputs.exponent;
+//         props.offset = inputs.offset;
+//         break;
+//       }
+//     }
+//     return {
+//       name: inputs.result,
+//       effects: [...in1.effects, s("feComponentTransfer", props)],
+//     };
+//   },
+// };
+
+export const CompositeNode = {
+  title: "Composite",
+  inputsDef: {
+    in: {
+      type: "hast_fe",
+      label: "in",
+    },
+    in2: {
+      type: "hast_fe",
+      label: "in2",
+    },
+    operator: {
+      type: "select",
+      label: "operator",
+      props: {
+        options: ["over", "in", "out", "atop", "xor", "lighter", "arithmetic"],
+      },
+    },
+    k1: {
+      type: "number",
+      label: "k1",
+      condition: (node) => node.inputs.operator[0].value === "arithmetic",
+    },
+    k2: {
+      type: "number",
+      label: "k2",
+      condition: (node) => node.inputs.operator[0].value === "arithmetic",
+    },
+    k3: {
+      type: "number",
+      label: "k3",
+      condition: (node) => node.inputs.operator[0].value === "arithmetic",
+    },
+    k4: {
+      type: "number",
+      label: "k4",
+      condition: (node) => node.inputs.operator[0].value === "arithmetic",
+    },
+    result: {
+      type: "string",
+      label: "result",
+      initialValue: (id) => `composite_${id}`,
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+    placement: "lastInput",
+  },
+  function: (inputs) => {
+    const in1 = inputs.in ?? { name: undefined, effects: [] };
+    const in2 = inputs.in2 ?? { name: undefined, effects: [] };
+    inputs.in = in1.name;
+    inputs.in2 = in2.name;
+    if (inputs.operator !== "arithmetic") {
+      delete inputs.k1;
+      delete inputs.k2;
+      delete inputs.k3;
+      delete inputs.k4;
+    }
+    return {
+      name: inputs.result,
+      effects: [
+        ...dedupedEffects([...in1.effects, ...in2.effects]),
+        s("feComposite", inputs),
+      ],
+    };
+  },
+} satisfies NodeDef;
+
+// TODO
+// export const ConvolveMatrix = {
+
+// } satisfies NodeDef;
+
+export const DisplacementMapNode = {
+  title: "Displacement Map",
+  inputsDef: {
+    in: {
+      type: "hast_fe",
+      label: "in",
+    },
+    in2: {
+      type: "hast_fe",
+      label: "in2",
+    },
+    scale: {
+      type: "number",
+      label: "scale",
+      props: {
+        step: 0.1,
+      },
+    },
+    xChannelSelector: {
+      type: "select",
+      label: "xChannelSelector",
+      props: {
+        options: ["R", "G", "B", "A"],
+      },
+    },
+    yChannelSelector: {
+      type: "select",
+      label: "yChannelSelector",
+      props: {
+        options: ["R", "G", "B", "A"],
+      },
+    },
+    result: {
+      type: "string",
+      label: "result",
+      initialValue: (id) => `displacementMap_${id}`,
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+    placement: "lastInput",
+  },
+  function: (inputs) => {
+    const in1 = inputs.in ?? { name: undefined, effects: [] };
+    const in2 = inputs.in2 ?? { name: undefined, effects: [] };
+    inputs.in = in1.name;
+    inputs.in2 = in2.name;
+    return {
+      name: inputs.result,
+      effects: [
+        ...dedupedEffects([...in1.effects, ...in2.effects]),
+        s(
+          "feDisplacementMap",
+          removeDefaults(inputs, {
+            in2: "",
+            scale: 0,
+            xChannelSelector: "A",
+            yChannelSelector: "A",
+          })
+        ),
+      ],
+    };
+  },
+} satisfies NodeDef;
+
+// TODO
+// export const DropShadow = {
+
+// } satisfies NodeDef;
+
+// TODO
+// export const Flood = {
+
+// } satisfies NodeDef;
+
+export const GaussianBlurNode = {
+  title: "Gaussian Blur",
+  inputsDef: {
+    in: {
+      type: "hast_fe",
+      label: "in",
+    },
+    stdDeviation: {
+      type: "number",
+      label: "stdDeviation",
+      props: {
+        step: 0.1,
+        min: 0,
+      },
+      initialValue: 0.5,
+    },
+    edgeMode: {
+      type: "select",
+      label: "edgeMode",
+      props: {
+        options: ["duplicate", "wrap", "none"],
+      },
+    },
+    result: {
+      type: "string",
+      label: "result",
+      initialValue: (id) => `gaussianBlur_${id}`,
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+    placement: "lastInput",
+  },
+  function: (inputs) => {
+    const in1 = inputs.in ?? { name: undefined, effects: [] };
+    inputs.in = in1.name;
+    inputs.stdDeviation = flattenPair(inputs.stdDeviation);
+    return {
+      name: inputs.result,
+      effects: [
+        ...in1.effects,
+        s(
+          "feGaussianBlur",
+          removeDefaults(inputs, {
+            stdDeviation: 0,
+            edgeMode: "duplicate",
+          })
+        ),
+      ],
+    };
+  },
+} satisfies NodeDef;
+
+export const ImageNode = {
+  title: "Image",
+  inputsDef: {
+    href: {
+      type: "string",
+      label: "href",
+    },
+    result: {
+      type: "string",
+      label: "result",
+      initialValue: (id) => `image_${id}`,
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+    placement: "lastInput",
+  },
+  function: (inputs) => {
+    return {
+      name: inputs.result,
+      effects: [s("feImage", inputs)],
+    };
+  },
+} satisfies NodeDef;
+
+export const MergeNode = {
+  title: "Merge",
+  inputsDef: {
+    in: {
+      type: "hast_fe",
+      label: "in",
+      array: true,
+    },
+    result: {
+      type: "string",
+      label: "result",
+      initialValue: (id) => `merge_${id}`,
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+  },
+  function: (inputs) => {
+    const mergeIn = inputs.in.filter((v) => v != null);
+    return {
+      name: inputs.result,
+      effects: [
+        ...dedupedEffects(mergeIn.flatMap((result) => result.effects)),
+        s("feMerge", { result: inputs.result }, [
+          ...mergeIn.map((result) => s("feMergeNode", { in: result.name })),
+        ]),
+      ],
+    };
+  },
+} satisfies NodeDef;
+
 export const MorphologyNode = {
   title: "Morphology",
   inputsDef: {
@@ -534,6 +633,109 @@ export const MorphologyNode = {
     };
   },
 } satisfies NodeDef;
+
+// TODO
+// export const OffsetNode = {
+
+// }
+
+// TODO
+// export const Tile = {
+
+// }
+
+export const TurbulenceNode = {
+  title: "Turbulence",
+  inputsDef: {
+    type: {
+      type: "select",
+      label: "Type",
+      props: {
+        options: ["turbulence", "fractalNoise"],
+      },
+    },
+    baseFrequency: {
+      type: "number_pair",
+      label: "baseFrequency",
+      props: {
+        step: 0.001,
+      },
+      initialValue: [0.2, 0.2],
+    },
+    numOctaves: {
+      type: "number",
+      label: "numOctaves",
+      initialValue: 1,
+      props: {
+        min: 1,
+      },
+    },
+    seed: {
+      type: "number",
+      label: "seed",
+      initialValue: 1,
+    },
+    stitchTiles: {
+      type: "select",
+      label: "stitchTiles",
+      props: {
+        options: ["noStitch", "stitch"],
+      },
+    },
+    result: {
+      type: "string",
+      label: "result",
+      initialValue: (id) => `turbulence_${id}`,
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "result",
+    placement: "lastInput",
+  },
+  function: (inputs) => {
+    inputs.baseFrequency = flattenPair(inputs.baseFrequency);
+    return {
+      name: inputs.result,
+      effects: [
+        s(
+          "feTurbulence",
+          removeDefaults(inputs, {
+            type: "turbulence",
+            baseFrequency: 0,
+            numOctaves: 1,
+            seed: 1,
+            stitchTiles: "noStitch",
+          })
+        ),
+      ],
+    };
+  },
+} satisfies NodeDef;
+
+// TODO
+// export const DiffuseLighting = {
+
+// } satisfies NodeDef;
+
+// TODO
+// export const SpecularLighting = {
+
+// } satisfies NodeDef;
+
+// TODO
+// export const DistantLight = {
+
+// } satisfies NodeDef;
+
+// TODO
+// export const PointLight = {
+
+// }
+// TODO
+// export const SpotLight = {
+
+// }
 
 function flattenPair(pair) {
   const x = pair[0];
