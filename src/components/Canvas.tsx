@@ -516,11 +516,9 @@ export function Canvas() {
             }}
           </Show>
           <Index each={nodes}>
-            {(node) => {
-              return (
-                <Show when={node()}>{(props) => <Node {...props()} />}</Show>
-              );
-            }}
+            {(node) => (
+              <Show when={node()}>{(props) => <Node {...props()} />}</Show>
+            )}
           </Index>
           <svg class="absolute overflow-visible pointer-events-none">
             <Show when={ghostHead() != null}>

@@ -30,7 +30,6 @@ export function NodesContextProvider(props: { children: JSX.Element }) {
   const setNextNodeId = (next) => (nodeIdCount = next);
 
   const [nodes, setNodes] = createStore<(NodeInfo | null)[]>([]);
-  const freeIds: number[] = [];
 
   const addNode = (node) => {
     setNodes(node.id, node);
@@ -38,6 +37,9 @@ export function NodesContextProvider(props: { children: JSX.Element }) {
 
   const removeNodes = (ids: number[]) => {
     batch(() => {
+      ids.forEach((id) => {
+        setNodes(id, null);
+      });
       nodes.forEach((node) => {
         if (node == null) return;
         const inputsDef = NODE_DEFS[node.key].inputsDef;
@@ -57,10 +59,6 @@ export function NodesContextProvider(props: { children: JSX.Element }) {
           }
         });
       });
-      ids.forEach((id) => {
-        setNodes(id, null);
-      });
-      freeIds.push(...ids);
     });
   };
 
