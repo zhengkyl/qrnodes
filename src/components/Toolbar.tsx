@@ -24,6 +24,7 @@ const FILTER_KEYS: (keyof typeof NODE_DEFS)[] = [
   "merge",
   "composite",
   "colorMatrix",
+  "morphology",
 ];
 
 export function Toolbox(props) {

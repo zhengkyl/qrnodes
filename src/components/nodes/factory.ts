@@ -7,6 +7,7 @@ import {
   GaussianBlurNode,
   ImageNode,
   MergeNode,
+  MorphologyNode,
   SourceNode,
   TurbulenceNode,
 } from "./filter";
@@ -39,6 +40,7 @@ export const NODE_DEFS = {
   merge: MergeNode,
   composite: CompositeNode,
   colorMatrix: ColorMatrixNode,
+  morphology: MorphologyNode,
 };
 
 type NodeInfoBase = {

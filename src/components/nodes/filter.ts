@@ -112,6 +112,7 @@ export const GaussianBlurNode = {
       label: "stdDeviation",
       props: {
         step: 0.1,
+        min: 0,
       },
       initialValue: 0.5,
     },
@@ -135,22 +136,18 @@ export const GaussianBlurNode = {
   },
   function: (inputs) => {
     const in1 = inputs.in ?? { name: undefined, effects: [] };
+    inputs.in = in1.name;
+    inputs.stdDeviation = flattenPair(inputs.stdDeviation);
     return {
       name: inputs.result,
       effects: [
         ...in1.effects,
         s(
           "feGaussianBlur",
-          removeDefaults(
-            {
-              ...inputs,
-              in: in1.name,
-            },
-            {
-              stdDeviation: 0,
-              edgeMode: "duplicate",
-            }
-          )
+          removeDefaults(inputs, {
+            stdDeviation: 0,
+            edgeMode: "duplicate",
+          })
         ),
       ],
     };
@@ -186,6 +183,7 @@ export const TurbulenceNode = {
     seed: {
       type: "number",
       label: "seed",
+      initialValue: 1,
     },
     stitchTiles: {
       type: "select",
@@ -206,7 +204,7 @@ export const TurbulenceNode = {
     placement: "lastInput",
   },
   function: (inputs) => {
-    inputs.baseFrequency = collapsePair(inputs.baseFrequency);
+    inputs.baseFrequency = flattenPair(inputs.baseFrequency);
     return {
       name: inputs.result,
       effects: [
@@ -216,7 +214,7 @@ export const TurbulenceNode = {
             type: "turbulence",
             baseFrequency: 0,
             numOctaves: 1,
-            seed: 0,
+            seed: 1,
             stitchTiles: "noStitch",
           })
         ),
@@ -271,25 +269,20 @@ export const DisplacementMapNode = {
   function: (inputs) => {
     const in1 = inputs.in ?? { name: undefined, effects: [] };
     const in2 = inputs.in2 ?? { name: undefined, effects: [] };
+    inputs.in = in1.name;
+    inputs.in2 = in2.name;
     return {
       name: inputs.result,
       effects: [
         ...dedupedEffects([...in1.effects, ...in2.effects]),
         s(
           "feDisplacementMap",
-          removeDefaults(
-            {
-              ...inputs,
-              in: in1.name,
-              in2: in2.name,
-            },
-            {
-              in2: "",
-              scale: 0,
-              xChannelSelector: "A",
-              yChannelSelector: "A",
-            }
-          )
+          removeDefaults(inputs, {
+            in2: "",
+            scale: 0,
+            xChannelSelector: "A",
+            yChannelSelector: "A",
+          })
         ),
       ],
     };
@@ -406,24 +399,19 @@ export const CompositeNode = {
   function: (inputs) => {
     const in1 = inputs.in ?? { name: undefined, effects: [] };
     const in2 = inputs.in2 ?? { name: undefined, effects: [] };
-    const props =
-      inputs.operator === "arithmetic"
-        ? {
-            ...inputs,
-            in: in1.name,
-            in2: in2.name,
-          }
-        : {
-            in: in1.name,
-            in2: in2.name,
-            operator: inputs.operator,
-            result: inputs.result,
-          };
+    inputs.in = in1.name;
+    inputs.in2 = in2.name;
+    if (inputs.operator !== "arithmetic") {
+      delete inputs.k1;
+      delete inputs.k2;
+      delete inputs.k3;
+      delete inputs.k4;
+    }
     return {
       name: inputs.result,
       effects: [
         ...dedupedEffects([...in1.effects, ...in2.effects]),
-        s("feComposite", props),
+        s("feComposite", inputs),
       ],
     };
   },
@@ -503,7 +491,51 @@ export const ColorMatrixNode = {
   },
 } satisfies NodeDef;
 
-function collapsePair(pair) {
+export const MorphologyNode = {
+  title: "Morphology",
+  inputsDef: {
+    in: {
+      type: "hast_fe",
+      label: "in",
+    },
+    operator: {
+      type: "select",
+      label: "operator",
+      props: {
+        options: ["erode", "dilate"],
+      },
+    },
+    radius: {
+      type: "number_pair",
+      label: "radius",
+      props: {
+        step: 0.1,
+      },
+      initialValue: [0, 0],
+    },
+    result: {
+      type: "string",
+      label: "result",
+      initialValue: (id) => `morphology_${id}`,
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+    placement: "lastInput",
+  },
+  function: (inputs) => {
+    const in1 = inputs.in ?? { name: undefined, effects: [] };
+    inputs.in = in1.name;
+    inputs.radius = flattenPair(inputs.radius);
+    return {
+      name: inputs.result,
+      effects: [...in1.effects, s("feMorphology", inputs)],
+    };
+  },
+} satisfies NodeDef;
+
+function flattenPair(pair) {
   const x = pair[0];
   const y = pair[1];
   if (x == y) {

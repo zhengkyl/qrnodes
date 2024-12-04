@@ -19,7 +19,6 @@ function AppWithContext() {
           onClick={() => {
             const condensed = unwrap(nodes).filter((node) => node != null);
             let currNode;
-            let currOutput;
             let currInputs;
             let currInputArray;
             let currInputArrayItem;
@@ -32,12 +31,10 @@ function AppWithContext() {
                   switch (key) {
                     case "width":
                     case "height":
+                    case "output":
                       return undefined;
                     case "inputs":
                       currInputs = v;
-                      return v;
-                    case "output":
-                      currOutput = v;
                       return v;
                   }
                 } else if (this === currInputs) {
@@ -46,18 +43,12 @@ function AppWithContext() {
                 } else if (this === currInputArray) {
                   currInputArrayItem = v;
                   return v;
-                } else if (this === currInputArrayItem || this === currOutput) {
+                } else if (this === currInputArrayItem) {
                   switch (key) {
                     case "cx":
                     case "cy":
                     case "ref":
                       return undefined;
-                    case "value": {
-                      return this === currOutput &&
-                        Object.keys(currNode.inputs).length
-                        ? null
-                        : v;
-                    }
                   }
                 }
 
@@ -83,6 +74,7 @@ function AppWithContext() {
             let maxId = 0;
             condensed.forEach((node) => {
               if (node.id > maxId) maxId = node.id;
+              node.output = {};
               expanded[node.id] = node;
             });
             setNodes(expanded);

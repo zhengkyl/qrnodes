@@ -85,7 +85,7 @@ export function SliderNumberInput(props: Props) {
     >
       <input
         classList={{
-          "w-full text-sm leading-tight border rounded-md pl-3 pr-8 py-2 bg-back-subtle focus:(ring-2 ring-fore-base ring-offset-2 ring-offset-back-base outline-none)":
+          "w-full text-sm leading-tight border rounded-md pl-3 pr-8 py-2 bg-back-subtle focus:(ring-2 ring-fore-base ring-offset-2 ring-offset-back-base outline-none) disabled:opacity-50":
             true,
           "cursor-ew-resize": sliding(),
         }}
@@ -119,13 +119,13 @@ export function SliderNumberInput(props: Props) {
         }}
         onPointerDown={(e) => {
           e.stopImmediatePropagation();
+          if (props.disabled) return;
           const startX = e.clientX;
           const startValue = props.value;
 
           const step = props.step ?? 1;
           const onPointerMove = (e) => {
             const steps = Math.round((e.clientX - startX) / 10);
-            if (steps === 0) return;
             setValueClamped(startValue + steps * step);
           };
           const onPointerUp = () => {
@@ -153,7 +153,7 @@ type PairProps = {
 };
 
 export function NumberPairInput(props: PairProps) {
-  const [linked, setLinked] = createSignal(true);
+  const [linked, setLinked] = createSignal(props.value[0] === props.value[1]);
   const setPair = (v) => {
     props.onValue([v, v]);
   };
@@ -184,6 +184,7 @@ export function NumberPairInput(props: PairProps) {
         step={props.step}
         value={props.value[1]}
         onValue={linked() ? setPair : setY}
+        disabled={linked()}
       />
     </div>
   );

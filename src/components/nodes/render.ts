@@ -19,15 +19,18 @@ export const RenderNode = {
 
     const width = inputs.qrCode.version * 4 + 17;
     const margin = 2;
+    const scale = 10;
     let d = "";
     for (let y = 0; y < width; y++) {
       for (let x = 0; x < width; x++) {
         if (inputs.qrCode.matrix[y * width + x] & 1) {
-          d += `M${x + margin},${y + margin}h1v1h-1z`;
+          let nx = (x + margin) * scale;
+          let ny = (y + margin) * scale;
+          d += `M${nx},${ny}h${scale}v${scale}h-${scale}z`;
         }
       }
     }
-    const fullWidth = width + 2 * margin;
+    const fullWidth = (width + 2 * margin) * scale;
     return s(
       "svg",
       {
