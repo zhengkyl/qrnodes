@@ -35,11 +35,11 @@ const FILTER_KEYS: (keyof typeof NODE_DEFS)[] = [
   "turbulence",
 ];
 const LIGHTING_KEYS: (keyof typeof NODE_DEFS)[] = [
-  // diffuseLighting
-  // specularLighting
-  // distantLight
-  // pointLight
-  // spotLight
+  "diffuseLighting",
+  "specularLighting",
+  "distantLight",
+  "pointLight",
+  "spotLight",
 ];
 
 export function Toolbox(props) {
@@ -155,6 +155,21 @@ export function Toolbox(props) {
               FILTER EFFECTS
             </div>
             <For each={FILTER_KEYS}>
+              {(key) => {
+                return (
+                  <div
+                    class="p-3.5 border leading-none font-bold text-sm w-49"
+                    onPointerDown={(e) => onPointerDownBaby(e, key)}
+                  >
+                    {NODE_DEFS[key].title}
+                  </div>
+                );
+              }}
+            </For>
+            <div class="leading-none text-xs font-bold py-2">
+              LIGHTING FILTER EFFECTS
+            </div>
+            <For each={LIGHTING_KEYS}>
               {(key) => {
                 return (
                   <div

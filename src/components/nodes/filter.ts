@@ -1007,29 +1007,259 @@ export const TurbulenceNode = {
   },
 } satisfies NodeDef;
 
-// TODO
-// export const DiffuseLighting = {
+export const DiffuseLightingNode = {
+  title: "Diffuse Lighting",
+  inputsDef: {
+    in: {
+      type: "hast_fe",
+      label: "in",
+    },
+    surfaceScale: {
+      type: "number",
+      label: "surfaceScale",
+      initialValue: 1,
+      props: {
+        step: 0.1,
+      },
+    },
+    diffuseConstant: {
+      type: "number",
+      label: "diffuseConstant",
+      initialValue: 1,
+      props: {
+        min: 0,
+        step: 0.1,
+      },
+    },
+    lightingColor: {
+      type: "string",
+      label: "lighting-color",
+      initialValue: "#ffffff",
+    },
+    lightSource: {
+      type: "hast_light",
+      label: "Light source",
+    },
+    result: {
+      type: "string",
+      label: "result",
+      initialValue: (id) => `diffuseLighting_${id}`,
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "result",
+    connector: "lastInput",
+  },
+  function: (inputs) => {
+    if (inputs.lightSource == null) return null;
 
-// } satisfies NodeDef;
+    const in1 = inputs.in ?? { name: undefined, effects: [] };
+    inputs.in = in1.name;
+    return {
+      name: inputs.result,
+      effects: [
+        s(
+          "feDiffuseLighting",
+          removeDefaults(inputs, {
+            surfaceScale: 1,
+            diffuseConstant: 1,
+            lightingColor: "#ffffff",
+          }),
+          [inputs.lightSource]
+        ),
+      ],
+    };
+  },
+} satisfies NodeDef;
 
-// TODO
-// export const SpecularLighting = {
+export const SpecularLightingNode = {
+  title: "Specular Lighting",
+  inputsDef: {
+    in: {
+      type: "hast_fe",
+      label: "in",
+    },
+    surfaceScale: {
+      type: "number",
+      label: "surfaceScale",
+      initialValue: 1,
+      props: {
+        step: 0.1,
+      },
+    },
+    specularConstant: {
+      type: "number",
+      label: "specularConstant",
+      initialValue: 1,
+      props: {
+        min: 0,
+        step: 0.1,
+      },
+    },
+    specularExponent: {
+      type: "number",
+      label: "specularExponent",
+      initialValue: 1,
+      props: {
+        min: 0,
+        step: 0.1,
+      },
+    },
+    lightingColor: {
+      type: "string",
+      label: "lighting-color",
+      initialValue: "#ffffff",
+    },
+    lightSource: {
+      type: "hast_light",
+      label: "Light source",
+    },
+    result: {
+      type: "string",
+      label: "result",
+      initialValue: (id) => `diffuseLighting_${id}`,
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "result",
+    connector: "lastInput",
+  },
+  function: (inputs) => {
+    if (inputs.lightSource == null) return null;
 
-// } satisfies NodeDef;
+    const in1 = inputs.in ?? { name: undefined, effects: [] };
+    inputs.in = in1.name;
+    return {
+      name: inputs.result,
+      effects: [
+        s(
+          "feDiffuseLighting",
+          removeDefaults(inputs, {
+            surfaceScale: 1,
+            diffuseConstant: 1,
+            lightingColor: "#ffffff",
+          }),
+          [inputs.lightSource]
+        ),
+      ],
+    };
+  },
+} satisfies NodeDef;
 
-// TODO
-// export const DistantLight = {
+export const DistantLightNode = {
+  title: "Distant Light",
+  inputsDef: {
+    azimuth: {
+      type: "number",
+      label: "azimuth",
+    },
+    elevation: {
+      type: "number",
+      label: "elevation",
+    },
+  },
+  outputDef: {
+    type: "hast_light",
+    label: "Light source",
+  },
+  function: (inputs) => {
+    return s(
+      "feDistantLight",
+      removeDefaults(inputs, { azimuth: 0, elevation: 0 })
+    );
+  },
+} satisfies NodeDef;
 
-// } satisfies NodeDef;
+export const PointLightNode = {
+  title: "Point Light",
+  inputsDef: {
+    x: {
+      type: "number",
+      label: "x",
+    },
+    y: {
+      type: "number",
+      label: "y",
+    },
+    z: {
+      type: "number",
+      label: "z",
+      initialValue: 1,
+    },
+  },
+  outputDef: {
+    type: "hast_light",
+    label: "Light source",
+  },
+  function: (inputs) => {
+    return s("fePointLight", removeDefaults(inputs, { x: 0, y: 0, z: 1 }));
+  },
+} satisfies NodeDef;
 
-// TODO
-// export const PointLight = {
-
-// }
-// TODO
-// export const SpotLight = {
-
-// }
+export const SpotLightNode = {
+  title: "Spot Light",
+  inputsDef: {
+    x: {
+      type: "number",
+      label: "x",
+    },
+    y: {
+      type: "number",
+      label: "y",
+    },
+    z: {
+      type: "number",
+      label: "z",
+      initialValue: 1,
+    },
+    pointsAtX: {
+      type: "number",
+      label: "pointsAtX",
+    },
+    pointsAtY: {
+      type: "number",
+      label: "pointsAtY",
+    },
+    pointsAtZ: {
+      type: "number",
+      label: "pointsAtZ",
+    },
+    specularExponent: {
+      type: "number",
+      label: "specularExponent",
+      initialValue: 1,
+      props: {
+        min: 0,
+        step: 0.1,
+      },
+    },
+    limitingConeAngle: {
+      type: "number",
+      label: "limitingConeAngle",
+    },
+  },
+  outputDef: {
+    type: "hast_light",
+    label: "Light source",
+  },
+  function: (inputs) => {
+    return s(
+      "fePointLight",
+      removeDefaults(inputs, {
+        x: 0,
+        y: 0,
+        z: 1,
+        pointsAtX: 0,
+        pointsAtY: 0,
+        pointsAtZ: 0,
+        specularExponent: 1,
+        limitingConeAngle: 0,
+      })
+    );
+  },
+} satisfies NodeDef;
 
 function flattenPair(pair) {
   const x = pair[0];

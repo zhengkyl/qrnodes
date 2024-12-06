@@ -9,6 +9,7 @@ export type InputType =
   | "hast"
   | "hast_fe"
   | "hast_filter"
+  | "hast_light"
   | "component_transfer_func";
 
 export type NodeDef = {

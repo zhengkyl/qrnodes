@@ -6,7 +6,9 @@ import {
   ComponentTransferNode,
   CompositeNode,
   ConvolveMatrixNode,
+  DiffuseLightingNode,
   DisplacementMapNode,
+  DistantLightNode,
   DropShadowNode,
   FilterNode,
   FloodNode,
@@ -15,7 +17,10 @@ import {
   MergeNode,
   MorphologyNode,
   OffsetNode,
+  PointLightNode,
   SourceNode,
+  SpecularLightingNode,
+  SpotLightNode,
   TileNode,
   TurbulenceNode,
 } from "./filter";
@@ -58,11 +63,11 @@ export const NODE_DEFS = {
   offset: OffsetNode,
   tile: TileNode,
   turbulence: TurbulenceNode,
-  // diffuseLighting
-  // specularLighting
-  // distantLight
-  // pointLight
-  // spotLight
+  diffuseLighting: DiffuseLightingNode,
+  specularLighting: SpecularLightingNode,
+  distantLight: DistantLightNode,
+  pointLight: PointLightNode,
+  spotLight: SpotLightNode,
 };
 
 type NodeInfoBase = {
@@ -129,5 +134,6 @@ const IMPLICIT_INITIAL_VALUE: {
   hast: null,
   hast_fe: null,
   hast_filter: null,
+  hast_light: null,
   component_transfer_func: null,
 };

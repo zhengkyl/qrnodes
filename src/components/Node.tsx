@@ -569,4 +569,5 @@ const INPUT_MAP: { [key in InputType]: Component<any> } = {
   qr_code: TextInput,
   hast: TextInput,
   hast_filter: TextInput,
+  hast_light: TextInput,
 };
