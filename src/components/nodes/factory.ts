@@ -27,6 +27,7 @@ import {
 import { TextNode, NumberNode, QrNode } from "./input";
 import {
   AbsoluteMapNode,
+  CombineNode,
   DataUrlNode,
   DisplayNode,
   RenderNode,
@@ -45,6 +46,7 @@ export const NODE_DEFS = {
   //
   filter: FilterNode,
   applyFilter: ApplyFilterNode,
+  combine: CombineNode,
   source: SourceNode,
   //
   blend: BlendNode,

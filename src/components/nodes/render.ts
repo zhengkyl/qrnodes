@@ -48,6 +48,30 @@ export const RenderNode = {
   },
 } satisfies NodeDef;
 
+export const CombineNode = {
+  title: "Combine",
+  inputsDef: {
+    svg: {
+      type: "hast",
+      label: "SVG",
+      array: true,
+    },
+  },
+  outputDef: {
+    type: "hast",
+    label: "HTML AST",
+  },
+  function: (inputs) => {
+    const svgs = inputs.svg.filter((svg) => svg != null);
+    if (svgs.length === 0) return null;
+    return s(
+      "svg",
+      svgs[0].properties,
+      svgs.flatMap((svg) => svg.children)
+    );
+  },
+} satisfies NodeDef;
+
 export const AbsoluteMapNode = {
   title: "Absolute Map",
   inputsDef: {

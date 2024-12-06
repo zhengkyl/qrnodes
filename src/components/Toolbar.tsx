@@ -9,6 +9,7 @@ import ArrowRightToLine from "lucide-solid/icons/arrow-right-to-line";
 const INPUT_KEYS: (keyof typeof NODE_DEFS)[] = ["text", "number", "qrCode"];
 const RENDER_KEYS: (keyof typeof NODE_DEFS)[] = [
   "render",
+  "combine",
   "absoluteMap",
   "dataUrl",
   "display",
