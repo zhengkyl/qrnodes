@@ -19,18 +19,19 @@ const FILTER_KEYS: (keyof typeof NODE_DEFS)[] = [
   "source",
   "blend",
   "colorMatrix",
-  // componentTransfer
+  "componentTransfer",
+  "componentTransferFunc",
   "composite",
-  // convolveMatrix
+  "convolveMatrix",
   "displacementMap",
-  // dropShadow
-  // flood
+  "dropShadow",
+  "flood",
   "gaussianBlur",
   "image",
   "merge",
   "morphology",
-  // offset
-  // tile
+  "offset",
+  "tile",
   "turbulence",
 ];
 const LIGHTING_KEYS: (keyof typeof NODE_DEFS)[] = [

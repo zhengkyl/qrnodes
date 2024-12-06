@@ -90,7 +90,7 @@ export const SourceNode = {
   outputDef: {
     type: "hast_fe",
     label: "result",
-    placement: "lastInput",
+    connector: "lastInput",
   },
   function: (inputs) => {
     return {
@@ -144,7 +144,7 @@ export const BlendNode = {
   outputDef: {
     type: "hast_fe",
     label: "Output",
-    placement: "lastInput",
+    connector: "lastInput",
   },
   function: (inputs) => {
     const in1 = inputs.in ?? { name: undefined, effects: [] };
@@ -176,7 +176,7 @@ export const ColorMatrixNode = {
       },
     },
     matrix: {
-      type: "color_matrix",
+      type: "matrix",
       label: "values",
       // prettier-ignore
       initialValue: [
@@ -185,6 +185,10 @@ export const ColorMatrixNode = {
         0, 0, 1, 0, 0,
         0, 0, 0, 1, 0,
       ],
+      props: {
+        rows: 4,
+        columns: 5,
+      },
       condition: (node) => node.inputs.type[0].value === "matrix",
     },
     saturate: {
@@ -211,7 +215,7 @@ export const ColorMatrixNode = {
   outputDef: {
     type: "hast_fe",
     label: "Output",
-    placement: "lastInput",
+    connector: "lastInput",
   },
   function: (inputs) => {
     const in1 = inputs.in ?? { name: undefined, effects: [] };
@@ -235,97 +239,150 @@ export const ColorMatrixNode = {
   },
 } satisfies NodeDef;
 
-// TODO
-// export const ComponentTransferNode = {
-//   title: "Component Transfer",
-//   inputsDef: {
-//     in: {
-//       type: "hast_fe",
-//       label: "in",
-//     },
-//     type: {
-//       type: "select",
-//       label: "type",
-//       props: {
-//         options: ["identity", "table", "discrete", "linear", "gamma"],
-//       },
-//     },
-//     tableValues: {
-//       type: "table_values",
-//       label: "tableValues",
-//       initialValue: [1, 0, 0, 0],
-//       condition: (node) =>
-//         node.inputs.type[0].value === "table" ||
-//         node.inputs.type[0].value === "discrete",
-//     },
-//     slope: {
-//       type: "number",
-//       label: "slope",
-//       initialValue: 1,
-//       condition: (node) => node.inputs.type[0].value === "linear",
-//     },
-//     intercept: {
-//       type: "number",
-//       label: "",
-//       condition: (node) => node.inputs.type[0].value === "linear",
-//     },
-//     amplitude: {
-//       type: "number",
-//       label: "amplitude",
-//       condition: (node) => node.inputs.type[0].value === "gamma",
-//     },
-//     exponent: {
-//       type: "number",
-//       label: "exponent",
-//       condition: (node) => node.inputs.type[0].value === "gamma",
-//     },
-//     offset: {
-//       type: "number",
-//       label: "offset",
-//       condition: (node) => node.inputs.type[0].value === "gamma",
-//     },
-//     result: {
-//       type: "string",
-//       label: "result",
-//       initialValue: (id) => `componentTransfer_${id}`,
-//     },
-//   },
-//   outputDef: {
-//     type: "hast_fe",
-//     label: "Output",
-//     placement: "lastInput",
-//   },
-//   function: (inputs) => {
-//     const in1 = inputs.in ?? { name: undefined, effects: [] };
-//     const props = {
-//       in: in1.name,
-//       type: inputs.type,
-//       result: inputs.result,
-//     } as any;
-//     switch (inputs.type) {
-//       case "discrete":
-//       case "table": {
-//         props.tableValues = inputs.tableValues.join(" ");
-//         break;
-//       }
-//       case "linear": {
-//         props.slope = inputs.slope;
-//         props.intercept = inputs.intercept;
-//         break;
-//       }
-//       case "gamma": {
-//         props.amplitude = inputs.amplitude;
-//         props.exponent = inputs.exponent;
-//         props.offset = inputs.offset;
-//         break;
-//       }
-//     }
-//     return {
-//       name: inputs.result,
-//       effects: [...in1.effects, s("feComponentTransfer", props)],
-//     };
-//   },
-// };
+export const ComponentTransferNode = {
+  title: "Component Transfer",
+  inputsDef: {
+    in: {
+      type: "hast_fe",
+      label: "in",
+    },
+    funcR: {
+      type: "component_transfer_func",
+      label: "funcR",
+    },
+    funcG: {
+      type: "component_transfer_func",
+      label: "funcG",
+    },
+    funcB: {
+      type: "component_transfer_func",
+      label: "funcB",
+    },
+    funcA: {
+      type: "component_transfer_func",
+      label: "funcA",
+    },
+    result: {
+      type: "string",
+      label: "result",
+      initialValue: (id) => `componentTransfer_${id}`,
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+    connector: "lastInput",
+  },
+  function: (inputs) => {
+    const in1 = inputs.in ?? { name: undefined, effects: [] };
+    const children: any[] = [];
+    if (inputs.funcR != null) {
+      children.push(s("feFuncR", inputs.funcR));
+    }
+    if (inputs.funcG != null) {
+      children.push(s("feFuncG", inputs.funcG));
+    }
+    if (inputs.funcB != null) {
+      children.push(s("feFuncB", inputs.funcB));
+    }
+    if (inputs.funcA != null) {
+      children.push(s("feFuncA", inputs.funcA));
+    }
+    return {
+      name: inputs.result,
+      effects: [
+        ...in1.effects,
+        s(
+          "feComponentTransfer",
+          {
+            in: in1.name,
+            result: inputs.result,
+          },
+          children
+        ),
+      ],
+    };
+  },
+} satisfies NodeDef;
+
+export const ComponentTransferFuncNode = {
+  title: "Component Transfer Func",
+  inputsDef: {
+    type: {
+      type: "select",
+      label: "type",
+      props: {
+        options: ["identity", "table", "discrete", "linear", "gamma"],
+      },
+    },
+    tableValues: {
+      type: "matrix",
+      label: "tableValues",
+      initialValue: [1, 0, 0, 0],
+      props: {
+        rows: 1,
+        columns: 4,
+      },
+      condition: (node) =>
+        node.inputs.type[0].value === "table" ||
+        node.inputs.type[0].value === "discrete",
+    },
+    slope: {
+      type: "number",
+      label: "slope",
+      initialValue: 1,
+      condition: (node) => node.inputs.type[0].value === "linear",
+    },
+    intercept: {
+      type: "number",
+      label: "intercept",
+      condition: (node) => node.inputs.type[0].value === "linear",
+    },
+    amplitude: {
+      type: "number",
+      label: "amplitude",
+      condition: (node) => node.inputs.type[0].value === "gamma",
+    },
+    exponent: {
+      type: "number",
+      label: "exponent",
+      condition: (node) => node.inputs.type[0].value === "gamma",
+    },
+    offset: {
+      type: "number",
+      label: "offset",
+      condition: (node) => node.inputs.type[0].value === "gamma",
+    },
+  },
+  outputDef: {
+    type: "component_transfer_func",
+    label: "Output",
+  },
+  function: (inputs) => {
+    const props = {
+      type: inputs.type,
+    } as any;
+    switch (inputs.type) {
+      case "discrete":
+      case "table": {
+        props.tableValues = inputs.tableValues.join(" ");
+        break;
+      }
+      case "linear": {
+        props.slope = inputs.slope;
+        props.intercept = inputs.intercept;
+        break;
+      }
+      case "gamma": {
+        props.amplitude = inputs.amplitude;
+        props.exponent = inputs.exponent;
+        props.offset = inputs.offset;
+        break;
+      }
+    }
+    return props;
+  },
+} satisfies NodeDef;
 
 export const CompositeNode = {
   title: "Composite",
@@ -374,7 +431,7 @@ export const CompositeNode = {
   outputDef: {
     type: "hast_fe",
     label: "Output",
-    placement: "lastInput",
+    connector: "lastInput",
   },
   function: (inputs) => {
     const in1 = inputs.in ?? { name: undefined, effects: [] };
@@ -397,10 +454,110 @@ export const CompositeNode = {
   },
 } satisfies NodeDef;
 
-// TODO
-// export const ConvolveMatrix = {
+export const ConvolveMatrixNode = {
+  title: "Convolve Matrix",
+  inputsDef: {
+    in: {
+      type: "hast_fe",
+      label: "in",
+    },
+    order: {
+      type: "number_pair",
+      label: "order",
+      initialValue: [3, 3], // x, y (columns x rows)
+      props: {
+        min: 1,
+      },
+    },
+    kernelMatrix: {
+      type: "matrix",
+      label: "kernelMatrix",
+      props: {
+        // TODO this is set dynamically in Node.tsx, but badly
+        // rows: 3,
+        // columns: 3,
+      },
+      // prettier-ignore
+      initialValue: [
+        0, 0, 0,
+        0, 1, 0,
+        0, 0, 0
+      ],
+    },
+    divisor: {
+      type: "number",
+      label: "divisor",
+      props: {
+        step: 0.1,
+      },
+    },
+    bias: {
+      type: "number",
+      label: "bias",
+      props: {
+        step: 0.1,
+      },
+    },
+    targetX: {
+      type: "number",
+      label: "targetX",
+      initialValue: 1, // floor(orderX / 2)
+    },
+    targetY: {
+      type: "number",
+      label: "targetY",
+      initialValue: 1, // floor(orderY / 2)
+    },
+    edgeMode: {
+      type: "select",
+      label: "edgeMode",
+      props: {
+        options: ["duplicate", "wrap", "none"],
+      },
+    },
+    preserveAlpha: {
+      type: "boolean",
+      label: "preserveAlpha",
+    },
+    result: {
+      type: "string",
+      label: "result",
+      initialValue: (id) => `convolveMatrix_${id}`,
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+    connector: "lastInput",
+  },
+  function: (inputs) => {
+    const in1 = inputs.in ?? { name: undefined, effects: [] };
+    const orderX = inputs.order[0];
+    const orderY = inputs.order[1];
 
-// } satisfies NodeDef;
+    inputs.in = in1.name;
+    inputs.order = flattenPair(inputs.order);
+    inputs.kernelMatrix = inputs.kernelMatrix.slice(0, length).join(" ");
+    return {
+      name: inputs.result,
+      effects: [
+        ...in1.effects,
+        s(
+          "feConvolveMatrix",
+          removeDefaults(inputs, {
+            order: 3,
+            divisor: 0,
+            bias: 0,
+            targetX: Math.floor(orderX / 2),
+            targetY: Math.floor(orderY / 2),
+            edgeMode: "duplicate",
+            preserveAlpha: false,
+          })
+        ),
+      ],
+    };
+  },
+} satisfies NodeDef;
 
 export const DisplacementMapNode = {
   title: "Displacement Map",
@@ -443,7 +600,7 @@ export const DisplacementMapNode = {
   outputDef: {
     type: "hast_fe",
     label: "Output",
-    placement: "lastInput",
+    connector: "lastInput",
   },
   function: (inputs) => {
     const in1 = inputs.in ?? { name: undefined, effects: [] };
@@ -468,15 +625,97 @@ export const DisplacementMapNode = {
   },
 } satisfies NodeDef;
 
-// TODO
-// export const DropShadow = {
+export const DropShadowNode = {
+  title: "Drop Shadow",
+  inputsDef: {
+    dx: {
+      type: "number",
+      label: "dx",
+    },
+    dy: {
+      type: "number",
+      label: "dy",
+    },
+    stdDeviation: {
+      type: "number",
+      label: "stdDeviation",
+    },
+    floodColor: {
+      type: "string",
+      label: "flood-color",
+      initialValue: "#000000",
+    },
+    floodOpacity: {
+      type: "number",
+      label: "flood-opacity",
+      initialValue: 1,
+    },
+    result: {
+      type: "string",
+      label: "result",
+      initialValue: (id) => `flood_${id}`,
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+    connector: "lastInput",
+  },
+  function: (inputs) => {
+    return {
+      name: inputs.result,
+      effects: [
+        s(
+          "feDropShadow",
+          removeDefaults(inputs, {
+            dx: 0,
+            dy: 0,
+            stdDeviation: 0,
+            floodColor: "#000000",
+            floodOpacity: 1,
+          })
+        ),
+      ],
+    };
+  },
+} satisfies NodeDef;
 
-// } satisfies NodeDef;
-
-// TODO
-// export const Flood = {
-
-// } satisfies NodeDef;
+export const FloodNode = {
+  title: "Flood",
+  inputsDef: {
+    floodColor: {
+      type: "string",
+      label: "flood-color",
+      initialValue: "#000000",
+    },
+    floodOpacity: {
+      type: "number",
+      label: "flood-opacity",
+      initialValue: 1,
+    },
+    result: {
+      type: "string",
+      label: "result",
+      initialValue: (id) => `flood_${id}`,
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+    connector: "lastInput",
+  },
+  function: (inputs) => {
+    return {
+      name: inputs.result,
+      effects: [
+        s(
+          "feFlood",
+          removeDefaults(inputs, { floodColor: "#000000", floodOpacity: 1 })
+        ),
+      ],
+    };
+  },
+} satisfies NodeDef;
 
 export const GaussianBlurNode = {
   title: "Gaussian Blur",
@@ -500,6 +739,7 @@ export const GaussianBlurNode = {
       props: {
         options: ["duplicate", "wrap", "none"],
       },
+      initialValue: "none",
     },
     result: {
       type: "string",
@@ -510,7 +750,7 @@ export const GaussianBlurNode = {
   outputDef: {
     type: "hast_fe",
     label: "Output",
-    placement: "lastInput",
+    connector: "lastInput",
   },
   function: (inputs) => {
     const in1 = inputs.in ?? { name: undefined, effects: [] };
@@ -524,7 +764,7 @@ export const GaussianBlurNode = {
           "feGaussianBlur",
           removeDefaults(inputs, {
             stdDeviation: 0,
-            edgeMode: "duplicate",
+            edgeMode: "none",
           })
         ),
       ],
@@ -548,7 +788,7 @@ export const ImageNode = {
   outputDef: {
     type: "hast_fe",
     label: "Output",
-    placement: "lastInput",
+    connector: "lastInput",
   },
   function: (inputs) => {
     return {
@@ -621,7 +861,7 @@ export const MorphologyNode = {
   outputDef: {
     type: "hast_fe",
     label: "Output",
-    placement: "lastInput",
+    connector: "lastInput",
   },
   function: (inputs) => {
     const in1 = inputs.in ?? { name: undefined, effects: [] };
@@ -634,15 +874,69 @@ export const MorphologyNode = {
   },
 } satisfies NodeDef;
 
-// TODO
-// export const OffsetNode = {
+export const OffsetNode = {
+  title: "Offset",
+  inputsDef: {
+    in: {
+      type: "hast_fe",
+      label: "in",
+    },
+    dx: {
+      type: "number",
+      label: "dx",
+    },
+    dy: {
+      type: "number",
+      label: "dy",
+    },
+    result: {
+      type: "string",
+      label: "result",
+      initialValue: (id) => `offset_${id}`,
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+    connector: "lastInput",
+  },
+  function: (inputs) => {
+    const in1 = inputs.in ?? { name: undefined, effects: [] };
+    inputs.in = in1.name;
+    return {
+      name: inputs.result,
+      effects: [s("feOffset", removeDefaults(inputs, { dx: 0, dy: 0 }))],
+    };
+  },
+} satisfies NodeDef;
 
-// }
-
-// TODO
-// export const Tile = {
-
-// }
+export const TileNode = {
+  title: "Tile",
+  inputsDef: {
+    in: {
+      type: "hast_fe",
+      label: "in",
+    },
+    result: {
+      type: "string",
+      label: "result",
+      initialValue: (id) => `offset_${id}`,
+    },
+  },
+  outputDef: {
+    type: "hast_fe",
+    label: "Output",
+    connector: "lastInput",
+  },
+  function: (inputs) => {
+    const in1 = inputs.in ?? { name: undefined, effects: [] };
+    inputs.in = in1.name;
+    return {
+      name: inputs.result,
+      effects: [s("feTile", inputs)],
+    };
+  },
+} satisfies NodeDef;
 
 export const TurbulenceNode = {
   title: "Turbulence",
@@ -691,7 +985,7 @@ export const TurbulenceNode = {
   outputDef: {
     type: "hast_fe",
     label: "result",
-    placement: "lastInput",
+    connector: "lastInput",
   },
   function: (inputs) => {
     inputs.baseFrequency = flattenPair(inputs.baseFrequency);

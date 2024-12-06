@@ -2,24 +2,24 @@ import {
   batch,
   createRenderEffect,
   For,
-  Match,
   onCleanup,
   onMount,
   Show,
-  Switch,
+  type Component,
 } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useCanvasContext } from "./Canvas";
 import { useNodesContext } from "./context/NodesContext";
 import { SliderNumberInput, NumberPairInput } from "./ui/NumberInput";
-import { TextInput } from "./ui/TextInput";
+import { ResizingTextInput, TextInput } from "./ui/TextInput";
 import { Select } from "./ui/Select";
 import { equal } from "../util/path";
 import { produce, unwrap } from "solid-js/store";
-import type { NodeDef, NodeInfo } from "./nodes/shared";
+import type { InputType, NodeDef, NodeInfo } from "./nodes/shared";
 import { NODE_DEFS } from "./nodes/factory";
-import { FilterInput } from "./ui/FilterInputs";
-import { ColorMatrixInput } from "./ui/ColorMatrixInput";
+import { FilterEffectInput, FuncInput } from "./ui/ComplexInputs";
+import { MatrixInput } from "./ui/MatrixInput";
+import { Switch } from "./ui/Switch";
 
 type NodeProps = NodeInfo;
 
@@ -373,7 +373,7 @@ export function Node(props: NodeProps) {
                         <div class="flex items-center pb-2">
                           <Show
                             when={
-                              nodeDef.outputDef.placement === "lastInput" &&
+                              nodeDef.outputDef.connector === "lastInput" &&
                               i() === numInputs - 1
                             }
                             fallback={
@@ -392,7 +392,7 @@ export function Node(props: NodeProps) {
                             />
                           </Show>
                           <Dynamic
-                            component={INPUT_MAP[inputDef.type] ?? TextInput}
+                            component={INPUT_MAP[inputDef.type]}
                             value={
                               field.from != null
                                 ? nodes[field.from!]!.output.value
@@ -428,6 +428,18 @@ export function Node(props: NodeProps) {
                                     }
                                   }
                             }
+                            rows={
+                              props.key === "convolveMatrix" &&
+                              key === "kernelMatrix"
+                                ? props.inputs.order[0].value[1]
+                                : undefined
+                            }
+                            columns={
+                              props.key === "convolveMatrix" &&
+                              key === "kernelMatrix"
+                                ? props.inputs.order[0].value[0]
+                                : undefined
+                            }
                             {...inputDef.props}
                           />
                         </div>
@@ -439,23 +451,26 @@ export function Node(props: NodeProps) {
             );
           }}
         </For>
-        <Show when={nodeDef.outputDef.placement == null}>
+        <Show when={nodeDef.outputDef.connector !== "lastInput"}>
           <div>
             <div class="select-none text-sm leading-none pb-1">
               {nodeDef.outputDef.label}
             </div>
             <div class="flex items-center">
-              <OutputConnector
-                id={props.id}
-                onPointerDown={onPointerDownTail}
-              />
-              <Switch
-                fallback={<TextInput value={props.output.value} disabled />}
+              <Show
+                when={nodeDef.outputDef.connector === "none"}
+                fallback={
+                  <>
+                    <OutputConnector
+                      id={props.id}
+                      onPointerDown={onPointerDownTail}
+                    />
+                    <TextInput value={props.output.value} disabled />
+                  </>
+                }
               >
-                <Match when={nodeDef.outputDef.type === "display"}>
-                  <DisplayOutput output={props.output.value} />
-                </Match>
-              </Switch>
+                <DisplayOutput output={props.output.value} />
+              </Show>
             </div>
           </div>
         </Show>
@@ -541,11 +556,17 @@ function DisplayOutput(props) {
   );
 }
 
-const INPUT_MAP = {
-  string: TextInput,
+const INPUT_MAP: { [key in InputType]: Component<any> } = {
+  boolean: Switch,
+  string: ResizingTextInput,
   number: SliderNumberInput,
   number_pair: NumberPairInput,
   select: Select,
-  hast_fe: FilterInput,
-  color_matrix: ColorMatrixInput,
+  matrix: MatrixInput,
+  hast_fe: FilterEffectInput,
+  component_transfer_func: FuncInput,
+  //
+  qr_code: TextInput,
+  hast: TextInput,
+  hast_filter: TextInput,
 };

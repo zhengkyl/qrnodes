@@ -140,6 +140,7 @@ export const DisplayNode = {
   outputDef: {
     type: "display",
     label: "Output",
+    connector: "none",
   },
   function: (inputs) => {
     if (inputs.hast == null) return null;

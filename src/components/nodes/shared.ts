@@ -1,13 +1,15 @@
 export type InputType =
+  | "boolean"
   | "string"
   | "number"
   | "number_pair"
+  | "matrix"
   | "qr_code"
   | "select"
   | "hast"
   | "hast_fe"
   | "hast_filter"
-  | "color_matrix";
+  | "component_transfer_func";
 
 export type NodeDef = {
   title: string;
@@ -24,12 +26,12 @@ export type NodeDef = {
     };
   };
   outputDef: {
-    type: InputType | "display";
+    type: InputType | "display" | "component_transfer_func";
     label: string;
     props?: {
       [key: string]: any;
     };
-    placement?: "none" | "lastInput";
+    connector?: "none" | "lastInput";
   };
   function: (inputs: any) => any;
 };

@@ -29,14 +29,17 @@ export function ResizingTextInput(props: Omit<InputProps, "onInput">) {
   let sizeRef: HTMLDivElement;
 
   return (
-    <div>
+    <div class="w-full">
       <TextInput
         {...props}
         onInput={(e) => {
           setValue(e.target.value);
         }}
       />
-      <div ref={sizeRef!} class="invisible h-0 px-3 border-x whitespace-pre">
+      <div
+        ref={sizeRef!}
+        class="invisible h-0 text-sm px-3 border-x whitespace-pre"
+      >
         {value()}
       </div>
     </div>

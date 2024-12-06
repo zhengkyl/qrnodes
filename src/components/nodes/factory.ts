@@ -2,14 +2,21 @@ import {
   ApplyFilterNode,
   BlendNode,
   ColorMatrixNode,
+  ComponentTransferFuncNode,
+  ComponentTransferNode,
   CompositeNode,
+  ConvolveMatrixNode,
   DisplacementMapNode,
+  DropShadowNode,
   FilterNode,
+  FloodNode,
   GaussianBlurNode,
   ImageNode,
   MergeNode,
   MorphologyNode,
+  OffsetNode,
   SourceNode,
+  TileNode,
   TurbulenceNode,
 } from "./filter";
 import { TextNode, NumberNode, QrNode } from "./input";
@@ -37,18 +44,19 @@ export const NODE_DEFS = {
   //
   blend: BlendNode,
   colorMatrix: ColorMatrixNode,
-  // componentTransfer
+  componentTransfer: ComponentTransferNode,
+  componentTransferFunc: ComponentTransferFuncNode,
   composite: CompositeNode,
-  // convolveMatrix
+  convolveMatrix: ConvolveMatrixNode,
   displacementMap: DisplacementMapNode,
-  // dropShadow
-  // flood
+  dropShadow: DropShadowNode,
+  flood: FloodNode,
   gaussianBlur: GaussianBlurNode,
   image: ImageNode,
   merge: MergeNode,
   morphology: MorphologyNode,
-  // offset
-  // tile
+  offset: OffsetNode,
+  tile: TileNode,
   turbulence: TurbulenceNode,
   // diffuseLighting
   // specularLighting
@@ -73,6 +81,9 @@ export function createNode(base: NodeInfoBase): NodeInfo {
 
   const entries = Object.entries(nodeDef.inputsDef);
   entries.forEach(([key, inputDef]) => {
+    if (typeof inputDef === "function") {
+      inputDef = inputDef(node);
+    }
     const initialValue = inputDef.initialValue;
     let value;
     if (initialValue === undefined) {
@@ -108,8 +119,9 @@ export function createNode(base: NodeInfoBase): NodeInfo {
 }
 
 const IMPLICIT_INITIAL_VALUE: {
-  [k in Exclude<InputType, "select" | "color_matrix">]: any;
+  [k in Exclude<InputType, "select" | "matrix">]: any;
 } = {
+  boolean: false,
   string: "",
   number: 0,
   number_pair: [0, 0],
@@ -117,4 +129,5 @@ const IMPLICIT_INITIAL_VALUE: {
   hast: null,
   hast_fe: null,
   hast_filter: null,
+  component_transfer_func: null,
 };

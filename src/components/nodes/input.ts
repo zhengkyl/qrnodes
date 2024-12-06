@@ -15,7 +15,7 @@ export const TextNode = {
   outputDef: {
     type: "string",
     label: "",
-    placement: "lastInput",
+    connector: "lastInput",
   },
   function: (inputs) => {
     return inputs.text;
@@ -33,7 +33,7 @@ export const NumberNode = {
   outputDef: {
     type: "number",
     label: "",
-    placement: "lastInput",
+    connector: "lastInput",
   },
   function: (inputs) => {
     return inputs.number;
