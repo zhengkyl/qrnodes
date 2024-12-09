@@ -1,5 +1,6 @@
 import { generate, QrOptions, Version } from "fuqr";
 import type { NodeDef } from "./shared";
+import { fromHtml } from "hast-util-from-html";
 
 export const TextNode = {
   title: "Text",
@@ -90,5 +91,24 @@ export const QrNode = {
       options = options.mask(inputs.mask);
     }
     return generate(inputs.text, options);
+  },
+} satisfies NodeDef;
+
+export const SvgStringNode = {
+  title: "SVG string",
+  inputsDef: {
+    string: {
+      type: "string",
+      label: "string",
+    },
+  },
+  outputDef: {
+    type: "hast",
+    label: "SVG AST",
+  },
+  function: (inputs) => {
+    if (!inputs.string) return null;
+    return fromHtml(inputs.string, { space: "svg", fragment: true })
+      .children[0];
   },
 } satisfies NodeDef;

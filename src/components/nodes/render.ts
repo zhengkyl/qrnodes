@@ -2,8 +2,46 @@ import { s } from "hastscript";
 import { toHtml } from "hast-util-to-html";
 import type { NodeDef } from "./shared";
 
-export const RenderNode = {
-  title: "Renderer",
+export const BackgroundNode = {
+  title: "Background",
+  inputsDef: {
+    qrCode: {
+      type: "qr_code",
+      label: "QR Code",
+    },
+  },
+  outputDef: {
+    type: "hast",
+    label: "HTML AST",
+  },
+  function: (inputs) => {
+    if (inputs.qrCode == null) return null;
+
+    const width = inputs.qrCode.version * 4 + 17;
+    const margin = 2;
+    const scale = 10;
+    const fullWidth = (width + 2 * margin) * scale;
+    return s(
+      "svg",
+      {
+        xmlns: "http://www.w3.org/2000/svg",
+        viewbox: `0 0 ${fullWidth} ${fullWidth}`,
+      },
+      [
+        s("rect", {
+          y: 0,
+          x: 0,
+          width: fullWidth,
+          height: fullWidth,
+          fill: "white",
+        }),
+      ]
+    );
+  },
+} satisfies NodeDef;
+
+export const ForegroundNode = {
+  title: "Foreground",
   inputsDef: {
     qrCode: {
       type: "qr_code",
@@ -21,6 +59,47 @@ export const RenderNode = {
     const margin = 2;
     const scale = 10;
     let d = "";
+    for (let y = 0; y < width; y++) {
+      for (let x = 0; x < width; x++) {
+        if (inputs.qrCode.matrix[y * width + x] & 1) {
+          let nx = (x + margin) * scale;
+          let ny = (y + margin) * scale;
+          d += `M${nx},${ny}h${scale}v${scale}h-${scale}z`;
+        }
+      }
+    }
+    const fullWidth = (width + 2 * margin) * scale;
+    return s(
+      "svg",
+      {
+        xmlns: "http://www.w3.org/2000/svg",
+        viewbox: `0 0 ${fullWidth} ${fullWidth}`,
+      },
+      [s("path", { d, fill: "black" })]
+    );
+  },
+} satisfies NodeDef;
+
+export const FlowerNode = {
+  title: "Flower",
+  inputsDef: {
+    qrCode: {
+      type: "qr_code",
+      label: "QR Code",
+    },
+  },
+  outputDef: {
+    type: "hast",
+    label: "HTML AST",
+  },
+  function: (inputs) => {
+    if (inputs.qrCode == null) return null;
+
+    const width = inputs.qrCode.version * 4 + 17;
+    const margin = 2;
+    const scale = 10;
+    let d = "";
+
     for (let y = 0; y < width; y++) {
       for (let x = 0; x < width; x++) {
         if (inputs.qrCode.matrix[y * width + x] & 1) {

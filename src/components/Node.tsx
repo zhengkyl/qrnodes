@@ -558,7 +558,7 @@ function DisplayOutput(props) {
 
 const INPUT_MAP: { [key in InputType]: Component<any> } = {
   boolean: Switch,
-  string: ResizingTextInput,
+  string: TextInput,
   number: SliderNumberInput,
   number_pair: NumberPairInput,
   select: Select,

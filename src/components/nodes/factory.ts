@@ -24,13 +24,14 @@ import {
   TileNode,
   TurbulenceNode,
 } from "./filter";
-import { TextNode, NumberNode, QrNode } from "./input";
+import { TextNode, NumberNode, QrNode, SvgStringNode } from "./input";
 import {
   AbsoluteMapNode,
+  BackgroundNode,
   CombineNode,
   DataUrlNode,
   DisplayNode,
-  RenderNode,
+  ForegroundNode,
 } from "./render";
 import type { InputType, NodeInfo } from "./shared";
 
@@ -38,8 +39,10 @@ export const NODE_DEFS = {
   text: TextNode,
   number: NumberNode,
   qrCode: QrNode,
+  svgString: SvgStringNode,
   //
-  render: RenderNode,
+  background: BackgroundNode,
+  foreground: ForegroundNode,
   display: DisplayNode,
   dataUrl: DataUrlNode,
   absoluteMap: AbsoluteMapNode,

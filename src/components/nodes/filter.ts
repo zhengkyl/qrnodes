@@ -848,7 +848,7 @@ export const MorphologyNode = {
       type: "number_pair",
       label: "radius",
       props: {
-        step: 0.1,
+        step: 0.01,
       },
       initialValue: [0, 0],
     },

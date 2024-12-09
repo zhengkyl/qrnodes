@@ -6,9 +6,15 @@ import { useCanvasContext, type Coords } from "./Canvas";
 import ArrowLeftToLine from "lucide-solid/icons/arrow-left-to-line";
 import ArrowRightToLine from "lucide-solid/icons/arrow-right-to-line";
 
-const INPUT_KEYS: (keyof typeof NODE_DEFS)[] = ["text", "number", "qrCode"];
+const INPUT_KEYS: (keyof typeof NODE_DEFS)[] = [
+  "text",
+  "number",
+  "qrCode",
+  "svgString",
+];
 const RENDER_KEYS: (keyof typeof NODE_DEFS)[] = [
-  "render",
+  "background",
+  "foreground",
   "combine",
   "absoluteMap",
   "dataUrl",
