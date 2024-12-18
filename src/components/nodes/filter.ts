@@ -905,7 +905,10 @@ export const OffsetNode = {
     inputs.in = in1.name;
     return {
       name: inputs.result,
-      effects: [s("feOffset", removeDefaults(inputs, { dx: 0, dy: 0 }))],
+      effects: [
+        ...in1.effects,
+        s("feOffset", removeDefaults(inputs, { dx: 0, dy: 0 })),
+      ],
     };
   },
 } satisfies NodeDef;
@@ -933,7 +936,7 @@ export const TileNode = {
     inputs.in = in1.name;
     return {
       name: inputs.result,
-      effects: [s("feTile", inputs)],
+      effects: [...in1.effects, , s("feTile", inputs)],
     };
   },
 } satisfies NodeDef;
@@ -1059,6 +1062,7 @@ export const DiffuseLightingNode = {
     return {
       name: inputs.result,
       effects: [
+        ...in1.effects,
         s(
           "feDiffuseLighting",
           removeDefaults(inputs, {
@@ -1134,6 +1138,7 @@ export const SpecularLightingNode = {
     return {
       name: inputs.result,
       effects: [
+        ...in1.effects,
         s(
           "feDiffuseLighting",
           removeDefaults(inputs, {
