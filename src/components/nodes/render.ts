@@ -1,5 +1,5 @@
-import { s } from "hastscript";
 import { toHtml } from "hast-util-to-html";
+import { s } from "hastscript";
 import type { NodeDef } from "./shared";
 
 export const BackgroundNode = {
@@ -80,8 +80,8 @@ export const ForegroundNode = {
   },
 } satisfies NodeDef;
 
-export const FlowerNode = {
-  title: "Flower",
+export const RenderNode = {
+  title: "Render",
   inputsDef: {
     qrCode: {
       type: "qr_code",

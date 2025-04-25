@@ -1,10 +1,10 @@
-import { createSignal, For, Show } from "solid-js";
-import { useNodesContext } from "./context/NodesContext";
-import { containsPoint } from "../util/rect";
-import { createNode, NODE_DEFS } from "./nodes/factory";
-import { useCanvasContext, type Coords } from "./Canvas";
 import ArrowLeftToLine from "lucide-solid/icons/arrow-left-to-line";
 import ArrowRightToLine from "lucide-solid/icons/arrow-right-to-line";
+import { createSignal, For, Show } from "solid-js";
+import { containsPoint } from "../util/rect";
+import { useCanvasContext, type Coords } from "./Canvas";
+import { useNodesContext } from "./context/NodesContext";
+import { createNode, NODE_DEFS } from "./nodes/factory";
 
 const INPUT_KEYS: (keyof typeof NODE_DEFS)[] = [
   "text",
@@ -13,6 +13,7 @@ const INPUT_KEYS: (keyof typeof NODE_DEFS)[] = [
   "svgString",
 ];
 const RENDER_KEYS: (keyof typeof NODE_DEFS)[] = [
+  "render",
   "background",
   "foreground",
   "combine",
@@ -53,7 +54,7 @@ export function Toolbox(props) {
   const { addNode, setActiveIds, nextNodeId } = useNodesContext();
   const { toCanvasCoords, canvasScale } = useCanvasContext();
 
-  let toolbox: HTMLDivElement;
+  let toolbox!: HTMLDivElement;
 
   const [babyPos, setBabyPos] = createSignal<Coords | null>(null);
   const [overToolbox, setOverToolbox] = createSignal(true);
