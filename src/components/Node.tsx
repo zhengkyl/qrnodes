@@ -7,20 +7,19 @@ import {
   Show,
   type Component,
 } from "solid-js";
+import { produce, unwrap } from "solid-js/store";
 import { Dynamic } from "solid-js/web";
+import { equal } from "../util/path";
 import { useCanvasContext } from "./Canvas";
 import { useNodesContext } from "./context/NodesContext";
-import { SliderNumberInput, NumberPairInput } from "./ui/NumberInput";
-import { TextInput } from "./ui/TextInput";
-import { Select } from "./ui/Select";
-import { equal } from "../util/path";
-import { produce, unwrap } from "solid-js/store";
-import type { InputType, NodeDef, NodeInfo } from "./nodes/shared";
 import { NODE_DEFS } from "./nodes/factory";
+import type { InputType, NodeDef, NodeInfo } from "./nodes/shared";
 import { FilterEffectInput, FuncInput } from "./ui/ComplexInputs";
 import { MatrixInput } from "./ui/MatrixInput";
+import { NumberPairInput, SliderNumberInput } from "./ui/NumberInput";
+import { Select } from "./ui/Select";
 import { Switch } from "./ui/Switch";
-
+import { Textarea, TextInput } from "./ui/TextInput";
 type NodeProps = NodeInfo;
 
 const R_SQUARED = 20 * 20;
@@ -107,7 +106,7 @@ export function Node(props: NodeProps) {
     }
   };
 
-  let nodeRef: HTMLDivElement;
+  let nodeRef!: HTMLDivElement;
 
   const onPointerDownTail = (
     fromId: number,
@@ -559,6 +558,7 @@ function DisplayOutput(props) {
 const INPUT_MAP: { [key in InputType]: Component<any> } = {
   boolean: Switch,
   string: TextInput,
+  textarea: Textarea,
   number: SliderNumberInput,
   number_pair: NumberPairInput,
   select: Select,

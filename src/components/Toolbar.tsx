@@ -11,6 +11,9 @@ const INPUT_KEYS: (keyof typeof NODE_DEFS)[] = [
   "number",
   "qrCode",
   "svgString",
+  "square",
+  "circle",
+  "webglCanvas",
 ];
 const RENDER_KEYS: (keyof typeof NODE_DEFS)[] = [
   "render",

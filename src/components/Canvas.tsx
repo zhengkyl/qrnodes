@@ -10,9 +10,9 @@ import {
 } from "solid-js";
 import { useNodesContext } from "./context/NodesContext";
 import { Node, type InputPathKey } from "./Node";
+import { NODE_DEFS } from "./nodes/factory";
 import type { NodeInfo } from "./nodes/shared";
 import { Toolbox } from "./Toolbar";
-import { NODE_DEFS } from "./nodes/factory";
 
 export type Coords = {
   x: number;
@@ -68,7 +68,7 @@ export function Canvas() {
   let vx;
   let vy;
 
-  let parentDiv: HTMLDivElement;
+  let parentDiv!: HTMLDivElement;
   const toCanvasCoords = (clientX, clientY) => {
     const rect = parentDiv.getBoundingClientRect();
     const scale = canvasScale();

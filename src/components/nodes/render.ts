@@ -247,6 +247,13 @@ export const DisplayNode = {
   },
   function: (inputs) => {
     if (inputs.hast == null) return null;
+    if (inputs.hast.properties.width || inputs.hast.properties.height) {
+      console.error(
+        "qrnodes: <svg> should not have width or height attributes"
+      );
+      inputs.hast.properties.width = undefined;
+      inputs.hast.properties.height = undefined;
+    }
     return toHtml(inputs.hast);
   },
 } satisfies NodeDef;

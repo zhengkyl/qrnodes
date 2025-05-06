@@ -9,6 +9,16 @@ export const FilterNode = {
       label: "id",
       initialValue: (id) => `filter_${id}`,
     },
+    colorInterpolationFilters: {
+      type: "select",
+      label: "color-interpolation-filters",
+      props: {
+        options: [
+          "sRGB",
+          "linearRGB",
+        ],
+      },
+    },
     results: {
       type: "hast_fe",
       label: "results",
@@ -22,7 +32,7 @@ export const FilterNode = {
   function: (inputs) => {
     return s(
       "filter",
-      { id: inputs.id },
+      { id: inputs.id, "color-interpolation-filters": inputs.colorInterpolationFilters },
       inputs.results.filter((res) => res != null).flatMap((res) => res.effects)
     );
   },
@@ -668,8 +678,8 @@ export const DropShadowNode = {
         s(
           "feDropShadow",
           removeDefaults(inputs, {
-            dx: 0,
-            dy: 0,
+            dx: 2,
+            dy: 2,
             stdDeviation: 0,
             floodColor: "#000000",
             floodOpacity: 1,

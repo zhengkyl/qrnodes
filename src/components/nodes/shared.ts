@@ -1,6 +1,7 @@
 export type InputType =
   | "boolean"
   | "string"
+  | "textarea"
   | "number"
   | "number_pair"
   | "matrix"

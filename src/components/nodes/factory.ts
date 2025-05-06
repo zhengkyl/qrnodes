@@ -24,7 +24,15 @@ import {
   TileNode,
   TurbulenceNode,
 } from "./filter";
-import { NumberNode, QrNode, SvgStringNode, TextNode } from "./input";
+import {
+  CircleNode,
+  NumberNode,
+  QrNode,
+  SquareNode,
+  SvgStringNode,
+  TextNode,
+  WebGLCanvasNode,
+} from "./input";
 import {
   AbsoluteMapNode,
   BackgroundNode,
@@ -38,9 +46,12 @@ import type { InputType, NodeInfo } from "./shared";
 
 export const NODE_DEFS = {
   text: TextNode,
+  webglCanvas: WebGLCanvasNode,
   number: NumberNode,
   qrCode: QrNode,
   svgString: SvgStringNode,
+  square: SquareNode,
+  circle: CircleNode,
   //
   render: RenderNode,
   background: BackgroundNode,
@@ -135,6 +146,7 @@ const IMPLICIT_INITIAL_VALUE: {
 } = {
   boolean: false,
   string: "",
+  textarea: "",
   number: 0,
   number_pair: [0, 0],
   qr_code: null,
