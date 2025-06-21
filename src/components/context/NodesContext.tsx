@@ -103,6 +103,7 @@ export function NodesContextProvider(props: { children: JSX.Element }) {
       const state = getStateForSaving();
       const projectId = saveProject(name, state, description);
       setCurrentProjectName(name);
+      clearAutoSave(); // Clear auto save after successful project save
       return projectId;
     } catch (error) {
       console.error('Failed to save state:', error);
@@ -154,12 +155,23 @@ export function NodesContextProvider(props: { children: JSX.Element }) {
         }
         
         setCurrentProjectName(projectName);
+        clearAutoSave(); // Clear auto save after successful project load
       });
       
       return true;
     } catch (error) {
       console.error('Failed to load state:', error);
       return false;
+    }
+  };
+
+  // Helper function to clear auto save data
+  const clearAutoSave = () => {
+    try {
+      localStorage.removeItem('qrnodes_hmr_auto_save');
+      console.log('🧹 Auto-save data cleared');
+    } catch (error) {
+      console.error('Failed to clear auto-save:', error);
     }
   };
 
@@ -232,6 +244,9 @@ export function NodesContextProvider(props: { children: JSX.Element }) {
             
             console.log(`🔄 Recovered ${loadedNodes?.length || 0} nodes from HMR auto-save`);
           }
+          
+          // Clear auto save data regardless of user choice to prevent repeated prompts
+          clearAutoSave();
         }
       }
     } catch (error) {

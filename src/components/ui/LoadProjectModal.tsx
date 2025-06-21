@@ -104,8 +104,8 @@ export function LoadProjectModal(props: LoadProjectModalProps) {
   return (
     <Show when={props.isOpen}>
       <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-[32rem] max-w-90vw max-h-80vh flex flex-col">
-          <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
+        <div class="bg-gray-800 rounded-lg p-6 w-[32rem] max-w-90vw max-h-80vh flex flex-col">
+          <h2 class="text-xl font-semibold mb-4 text-gray-100">
             Load Project
           </h2>
           
@@ -117,29 +117,29 @@ export function LoadProjectModal(props: LoadProjectModalProps) {
                     <div
                       class={`p-3 border rounded-lg cursor-pointer transition-colors ${
                         selectedProject() === project.metadata.name
-                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                          : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+                          ? "border-blue-500 bg-blue-900/20"
+                          : "border-gray-600 hover:border-gray-500"
                       }`}
                       onClick={() => setSelectedProject(project.metadata.name)}
                     >
                       <div class="flex justify-between items-start">
                         <div class="flex-1 min-w-0">
-                          <h3 class="font-medium text-gray-900 dark:text-gray-100 truncate">
+                          <h3 class="font-medium text-gray-100 truncate">
                             {project.metadata.name}
                           </h3>
                           <Show when={project.metadata.description}>
-                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                            <p class="text-sm text-gray-400 mt-1 line-clamp-2">
                               {project.metadata.description}
                             </p>
                           </Show>
-                          <p class="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                          <p class="text-xs text-gray-500 mt-2">
                             Updated: {formatDate(project.metadata.updatedAt)}
                           </p>
                         </div>
                         <button
                           onClick={(e) => handleDelete(project.metadata.name, e)}
                           disabled={isDeleting() === project.metadata.name}
-                          class="ml-3 p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
+                          class="ml-3 p-1 text-red-400 hover:text-red-300 disabled:opacity-50"
                           title="Delete project"
                         >
                           {isDeleting() === project.metadata.name ? "..." : "×"}
@@ -150,14 +150,14 @@ export function LoadProjectModal(props: LoadProjectModalProps) {
                 </For>
               </div>
             }>
-              <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+              <div class="text-center py-8 text-gray-400">
                 No saved projects found
               </div>
             </Show>
           </div>
 
           <Show when={error()}>
-            <div class="mt-4 text-red-600 dark:text-red-400 text-sm">
+            <div class="mt-4 text-red-400 text-sm">
               {error()}
             </div>
           </Show>
@@ -166,14 +166,14 @@ export function LoadProjectModal(props: LoadProjectModalProps) {
             <button
               onClick={handleClose}
               disabled={isLoading()}
-              class="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="flex-1 px-4 py-2 text-gray-300 bg-gray-600 rounded-md hover:bg-gray-500 disabled:(opacity-50 cursor-not-allowed)"
             >
               Cancel
             </button>
             <button
               onClick={handleLoad}
               disabled={isLoading() || !selectedProject()}
-              class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:(opacity-50 cursor-not-allowed)"
             >
               {isLoading() ? "Loading..." : "Load"}
             </button>

@@ -51,14 +51,14 @@ export function SaveProjectModal(props: SaveProjectModalProps) {
   return (
     <Show when={props.isOpen}>
       <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-90vw">
-          <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">
+        <div class="bg-gray-800 rounded-lg p-6 w-96 max-w-90vw">
+          <h2 class="text-xl font-semibold mb-4 text-gray-100">
             Save Project
           </h2>
           
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label class="block text-sm font-medium text-gray-300 mb-1">
                 Project Name *
               </label>
               <input
@@ -66,13 +66,13 @@ export function SaveProjectModal(props: SaveProjectModalProps) {
                 value={projectName()}
                 onInput={(e) => setProjectName(e.currentTarget.value)}
                 placeholder="Enter project name"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-100 focus:(outline-none ring-2 ring-blue-500)"
                 disabled={isSaving()}
               />
             </div>
             
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label class="block text-sm font-medium text-gray-300 mb-1">
                 Description (optional)
               </label>
               <textarea
@@ -80,14 +80,14 @@ export function SaveProjectModal(props: SaveProjectModalProps) {
                 onInput={(e) => setDescription(e.currentTarget.value)}
                 placeholder="Enter project description"
                 rows={3}
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none"
+                class="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-100 resize-none focus:(outline-none ring-2 ring-blue-500)"
                 disabled={isSaving()}
               />
             </div>
           </div>
 
           <Show when={error()}>
-            <div class="mt-4 text-red-600 dark:text-red-400 text-sm">
+            <div class="mt-4 text-red-400 text-sm">
               {error()}
             </div>
           </Show>
@@ -96,14 +96,14 @@ export function SaveProjectModal(props: SaveProjectModalProps) {
             <button
               onClick={handleClose}
               disabled={isSaving()}
-              class="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="flex-1 px-4 py-2 text-gray-300 bg-gray-600 rounded-md hover:bg-gray-500 disabled:(opacity-50 cursor-not-allowed)"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={isSaving() || !projectName().trim()}
-              class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:(opacity-50 cursor-not-allowed)"
             >
               {isSaving() ? "Saving..." : "Save"}
             </button>

@@ -13,10 +13,7 @@ export const FilterNode = {
       type: "select",
       label: "color-interpolation-filters",
       props: {
-        options: [
-          "sRGB",
-          "linearRGB",
-        ],
+        options: ["sRGB", "linearRGB"],
       },
     },
     results: {
@@ -32,7 +29,10 @@ export const FilterNode = {
   function: (inputs) => {
     return s(
       "filter",
-      { id: inputs.id, "color-interpolation-filters": inputs.colorInterpolationFilters },
+      {
+        id: inputs.id,
+        "color-interpolation-filters": inputs.colorInterpolationFilters,
+      },
       inputs.results.filter((res) => res != null).flatMap((res) => res.effects)
     );
   },
@@ -316,7 +316,7 @@ export const ComponentTransferNode = {
 } satisfies NodeDef;
 
 export const ComponentTransferFuncNode = {
-  title: "Component Transfer Func",
+  title: "Transfer Func",
   inputsDef: {
     type: {
       type: "select",
