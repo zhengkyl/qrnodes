@@ -7,10 +7,13 @@ import {
   type Setter,
   batch,
   createMemo,
+  onMount,
+  onCleanup,
 } from "solid-js";
 import { createStore, type SetStoreFunction } from "solid-js/store";
 import type { NodeInfo } from "../nodes/shared";
 import { NODE_DEFS } from "../nodes/factory";
+import { saveProject, loadProject, type SavedProject } from "../../utils/projectStorage";
 
 export const NodesContext = createContext<{
   activeIds: Accessor<number[]>;
@@ -22,6 +25,11 @@ export const NodesContext = createContext<{
   setNodes: SetStoreFunction<(NodeInfo | null)[]>;
   nextNodeId: () => number;
   setNextNodeId: (next: number) => void;
+  currentProjectName: Accessor<string | null>;
+  saveState: (name: string, description?: string) => Promise<string>;
+  saveCurrentState: () => Promise<boolean>;
+  loadState: (projectName: string) => Promise<boolean>;
+  getStateForSaving: () => any;
 }>();
 
 export function NodesContextProvider(props: { children: JSX.Element }) {
@@ -30,6 +38,7 @@ export function NodesContextProvider(props: { children: JSX.Element }) {
   const setNextNodeId = (next) => (nodeIdCount = next);
 
   const [nodes, setNodes] = createStore<(NodeInfo | null)[]>([]);
+  const [currentProjectName, setCurrentProjectName] = createSignal<string | null>(null);
 
   const addNode = (node) => {
     setNodes(node.id, node);
@@ -79,6 +88,161 @@ export function NodesContextProvider(props: { children: JSX.Element }) {
     return prev;
   }, null);
 
+  const getStateForSaving = () => {
+    return {
+      nodes: nodes.filter(node => node != null).map(node => {
+        const { width, height, output, cx, cy, ref, ...rest } = node;
+        return rest;
+      }),
+      nextNodeId: nodeIdCount
+    };
+  };
+
+  const saveState = async (name: string, description?: string): Promise<string> => {
+    try {
+      const state = getStateForSaving();
+      const projectId = saveProject(name, state, description);
+      setCurrentProjectName(name);
+      return projectId;
+    } catch (error) {
+      console.error('Failed to save state:', error);
+      throw error;
+    }
+  };
+
+  const saveCurrentState = async (): Promise<boolean> => {
+    try {
+      const projectName = currentProjectName();
+      
+      if (!projectName) {
+        return false; // No current project to save to
+      }
+      
+      const state = getStateForSaving();
+      saveProject(projectName, state);
+      return true;
+    } catch (error) {
+      console.error('Failed to save current state:', error);
+      return false;
+    }
+  };
+
+  const loadState = async (projectName: string): Promise<boolean> => {
+    try {
+      const project = loadProject(projectName);
+      if (!project) {
+        return false;
+      }
+
+      const { nodes: loadedNodes, nextNodeId: loadedNextNodeId } = project.state;
+      
+      batch(() => {
+        setNodes([]);
+        setActiveIds([]);
+        
+        if (loadedNodes && Array.isArray(loadedNodes)) {
+          loadedNodes.forEach((node: NodeInfo) => {
+            if (node && typeof node.id === 'number') {
+              node.output = {};
+              setNodes(node.id, node);
+            }
+          });
+        }
+        
+        if (typeof loadedNextNodeId === 'number') {
+          setNextNodeId(loadedNextNodeId);
+        }
+        
+        setCurrentProjectName(projectName);
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to load state:', error);
+      return false;
+    }
+  };
+
+  // Auto-save functionality for HMR
+  const performAutoSave = () => {
+    try {
+      // Only auto-save if there are nodes to save
+      const currentNodes = nodes.filter(node => node != null);
+      if (currentNodes.length === 0) {
+        console.log('🔄 HMR Auto-save: No nodes to save');
+        return;
+      }
+
+      const state = getStateForSaving();
+      const autoSaveData = {
+        state,
+        timestamp: new Date().toISOString(),
+        type: 'hmr-auto-save',
+        nodeCount: currentNodes.length
+      };
+      
+      localStorage.setItem('qrnodes_hmr_auto_save', JSON.stringify(autoSaveData));
+      console.log(`💾 HMR Auto-saved: ${currentNodes.length} nodes at ${autoSaveData.timestamp}`);
+    } catch (error) {
+      console.error('❌ HMR Auto-save failed:', error);
+    }
+  };
+
+  // Set up HMR auto-save listener and recovery
+  onMount(() => {
+    const handleHMRAutoSave = (event: CustomEvent) => {
+      console.log('🔥 HMR Auto-save triggered by:', event.detail);
+      performAutoSave();
+    };
+
+    window.addEventListener('hmr:autosave', handleHMRAutoSave as EventListener);
+    
+    // Check for auto-saved data on mount
+    try {
+      const saved = localStorage.getItem('qrnodes_hmr_auto_save');
+      if (saved) {
+        const autoSaveData = JSON.parse(saved);
+        const timeDiff = Date.now() - new Date(autoSaveData.timestamp).getTime();
+        
+        // If auto-save is less than 5 minutes old and we have no current nodes, offer recovery
+        const currentNodes = nodes.filter(node => node != null);
+        if (timeDiff < 5 * 60 * 1000 && currentNodes.length === 0 && autoSaveData.nodeCount > 0) {
+          const shouldRecover = confirm(
+            `HMR Auto-saved data found from ${new Date(autoSaveData.timestamp).toLocaleString()}\n` +
+            `Contains ${autoSaveData.nodeCount} nodes. Would you like to recover it?`
+          );
+          
+          if (shouldRecover) {
+            const { nodes: loadedNodes, nextNodeId: loadedNextNodeId } = autoSaveData.state;
+            
+            batch(() => {
+              if (loadedNodes && Array.isArray(loadedNodes)) {
+                loadedNodes.forEach((node: NodeInfo) => {
+                  if (node && typeof node.id === 'number') {
+                    node.output = {};
+                    setNodes(node.id, node);
+                  }
+                });
+              }
+              
+              if (typeof loadedNextNodeId === 'number') {
+                setNextNodeId(loadedNextNodeId);
+              }
+            });
+            
+            console.log(`🔄 Recovered ${loadedNodes?.length || 0} nodes from HMR auto-save`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ HMR Auto-recovery failed:', error);
+    }
+    
+    onCleanup(() => {
+      window.removeEventListener('hmr:autosave', handleHMRAutoSave as EventListener);
+    });
+  });
+
   return (
     <NodesContext.Provider
       value={{
@@ -91,6 +255,11 @@ export function NodesContextProvider(props: { children: JSX.Element }) {
         addNode,
         removeNodes,
         setNodes,
+        currentProjectName,
+        saveState,
+        saveCurrentState,
+        loadState,
+        getStateForSaving,
       }}
     >
       {props.children}

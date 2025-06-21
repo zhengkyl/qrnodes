@@ -50,6 +50,7 @@ node-based editor for QR codes
 ## Todo
 
 - topo sort to prevent loops
+- switch to @qrshark/qr, wasm not defined on autosave
 
 ## Inspiration
 

@@ -4,12 +4,17 @@ import {
   NodesContextProvider,
   useNodesContext,
 } from "./components/context/NodesContext";
-import { batch } from "solid-js";
+import { batch, createSignal } from "solid-js";
 import type { NodeInfo } from "./components/nodes/shared";
+import { SaveProjectModal } from "./components/ui/SaveProjectModal";
+import { LoadProjectModal } from "./components/ui/LoadProjectModal";
 
 function AppWithContext() {
-  const { nodes, setNodes, setActiveIds, setNextNodeId, displayId } =
+  const { nodes, setNodes, setActiveIds, setNextNodeId, displayId, currentProjectName, saveCurrentState } =
     useNodesContext();
+
+  const [showSaveModal, setShowSaveModal] = createSignal(false);
+  const [showLoadModal, setShowLoadModal] = createSignal(false);
 
   const downloadSvg = async () => {
     const url = URL.createObjectURL(
@@ -27,6 +32,27 @@ function AppWithContext() {
       <div class="flex gap-4 px-2">
         <h1>qrnodes</h1>
         <a href="https://github.com/zhengkyl/qrnodes">source code</a>
+        <button
+          onClick={async () => {
+            const success = await saveCurrentState();
+            if (!success) {
+              setShowSaveModal(true); // Fallback to save as if no current project
+            }
+          }}
+          disabled={!currentProjectName()}
+        >
+          save{currentProjectName() ? ` (${currentProjectName()})` : ''}
+        </button>
+        <button
+          onClick={() => setShowSaveModal(true)}
+        >
+          save as
+        </button>
+        <button
+          onClick={() => setShowLoadModal(true)}
+        >
+          load
+        </button>
         <button
           onClick={() => {
             const condensed = unwrap(nodes).filter((node) => node != null);
@@ -105,6 +131,20 @@ function AppWithContext() {
         </button>
       </div>
       <Panels />
+      <SaveProjectModal
+        isOpen={showSaveModal()}
+        onClose={() => setShowSaveModal(false)}
+        onSave={() => {
+          console.log("Project saved successfully");
+        }}
+      />
+      <LoadProjectModal
+        isOpen={showLoadModal()}
+        onClose={() => setShowLoadModal(false)}
+        onLoad={() => {
+          console.log("Project loaded successfully");
+        }}
+      />
     </div>
   );
 }

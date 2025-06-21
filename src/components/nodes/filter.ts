@@ -735,13 +735,13 @@ export const GaussianBlurNode = {
       label: "in",
     },
     stdDeviation: {
-      type: "number",
+      type: "number_pair",
       label: "stdDeviation",
+      initialValue: [0.5, 0.5],
       props: {
         step: 0.1,
         min: 0,
       },
-      initialValue: 0.5,
     },
     edgeMode: {
       type: "select",
