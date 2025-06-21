@@ -1,4 +1,4 @@
-import { generate, QrOptions, Version } from "fuqr";
+import { generate } from "@quartercode/qr";
 import { fromHtml } from "hast-util-from-html";
 import { s } from "hastscript";
 import type { NodeDef } from "./shared";
@@ -58,7 +58,7 @@ export const QrNode = {
       label: "Min version",
       props: {
         min: 1,
-        max: 40,
+        max: 13,
       },
       initialValue: 1,
     },
@@ -73,7 +73,7 @@ export const QrNode = {
       type: "select",
       label: "Mask",
       props: {
-        options: ["Auto", 0, 1, 2, 3, 4, 5, 6, 7],
+        options: [0, 1, 2, 3, 4, 5, 6, 7],
       },
     },
   },
@@ -82,15 +82,12 @@ export const QrNode = {
     label: "QR Code",
   },
   function: (inputs) => {
-    if (inputs.minVersion < 1 || inputs.minVersion > 40) return null;
+    const options: any = {
+      mask: inputs.mask as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7,
+      minVersion: inputs.minVersion,
+      eclIndex: ["Low", "Medium", "Quartile", "High"].indexOf(inputs.minEcl),
+    };
 
-    const ecl = ["Low", "Medium", "Quartile", "High"];
-    let options = new QrOptions()
-      .min_version(new Version(inputs.minVersion))
-      .min_ecl(ecl.indexOf(inputs.minEcl));
-    if (inputs.mask !== "Auto") {
-      options = options.mask(inputs.mask);
-    }
     return generate(inputs.text, options);
   },
 } satisfies NodeDef;
