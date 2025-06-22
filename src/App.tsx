@@ -15,9 +15,10 @@ function AppWithContext() {
     saveState,
     loadState,
     getStateString,
+    showSaveModal,
+    setShowSaveModal,
   } = useNodesContext();
 
-  const [showSaveModal, setShowSaveModal] = createSignal(false);
   const [showLoadModal, setShowLoadModal] = createSignal(false);
 
   const downloadSvg = async () => {

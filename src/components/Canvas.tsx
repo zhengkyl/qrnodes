@@ -3,6 +3,8 @@ import {
   createSignal,
   For,
   Index,
+  onCleanup,
+  onMount,
   Show,
   useContext,
   type Accessor,
@@ -61,6 +63,11 @@ export function Canvas() {
   const MIN_SCALE = 0.1;
   const MAX_SCALE = 10;
   const [canvasScale, setCanvasScale] = createSignal(1);
+  const [mouseCoords, setMouseCoords] = createSignal<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
+  const [clipboard, setClipboard] = createSignal<NodeInfo[]>([]);
 
   let prevT;
   let prevClientX;
@@ -150,8 +157,87 @@ export function Canvas() {
     prevT = now;
   };
 
-  const { nodes, removeNodes, setNodes, activeIds, setActiveIds } =
-    useNodesContext();
+  const {
+    nodes,
+    removeNodes,
+    setNodes,
+    activeIds,
+    setActiveIds,
+    addNode,
+    nextNodeId,
+    saveState,
+    currentProjectName,
+    setShowSaveModal,
+  } = useNodesContext();
+
+  const copyNodes = () => {
+    const selectedNodes = activeIds()
+      .map((id) => nodes[id])
+      .filter((node) => node != null) as NodeInfo[];
+    setClipboard(selectedNodes);
+  };
+
+  const pasteNodes = () => {
+    const clipboardNodes = clipboard();
+    if (clipboardNodes.length === 0) return;
+
+    const mouse = mouseCoords();
+    const newNodeIds: number[] = [];
+
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const node of clipboardNodes) {
+      minX = Math.min(minX, node.x);
+      maxX = Math.max(maxX, node.x + node.width);
+      minY = Math.min(minY, node.y);
+      maxY = Math.max(maxY, node.y + node.height);
+    }
+    const width = maxX - minX;
+    const height = maxY - minY;
+    setActiveBox({ x: mouse.x, y: mouse.y, width, height });
+
+    // Create mapping from old IDs to new IDs
+    const idMapping: Record<number, number> = {};
+    clipboardNodes.forEach((node) => {
+      const newId = nextNodeId();
+      idMapping[node.id] = newId;
+      newNodeIds.push(newId);
+    });
+
+    // Create new nodes with updated positions and IDs
+    clipboardNodes.forEach((node) => {
+      const newNode: NodeInfo = {
+        ...node,
+        id: idMapping[node.id],
+        x: node.x - minX + mouse.x,
+        y: node.y - minY + mouse.y,
+        inputs: { ...node.inputs },
+      };
+
+      // Update input connections to point to new IDs when they reference copied nodes
+      Object.keys(newNode.inputs).forEach((inputKey) => {
+        newNode.inputs[inputKey] = newNode.inputs[inputKey].map((field) => ({
+          ...field,
+          from:
+            field.from != null && idMapping[field.from] != null
+              ? idMapping[field.from]
+              : null,
+        }));
+      });
+
+      addNode(newNode);
+    });
+
+    // Select the newly pasted nodes
+    setActiveIds(newNodeIds);
+  };
+
+  const duplicateNodes = () => {
+    copyNodes();
+    pasteNodes();
+  };
 
   let selectStartX;
   let selectStartY;
@@ -326,16 +412,59 @@ export function Canvas() {
     y: number;
   } | null>(null);
 
-  document.addEventListener("keydown", (e) => {
-    switch (e.key) {
-      case "Delete":
-      case "Backspace": {
-        const prevActive = activeIds();
-        setActiveIds([]);
-        setActiveBox(null);
-        removeNodes(prevActive);
+  onMount(() => {
+    let keydown = false;
+    const handleUp = () => {
+      keydown = false;
+    };
+    const handleDown = (e) => {
+      if (keydown) return;
+
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key.toLowerCase()) {
+          case "s":
+            if (currentProjectName()) {
+              saveState();
+            } else {
+              setShowSaveModal(true);
+            }
+            break;
+          case "c":
+            copyNodes();
+            break;
+          case "v":
+            pasteNodes();
+            break;
+          case "d":
+            duplicateNodes();
+            break;
+          default:
+            return;
+        }
+      } else {
+        switch (e.key) {
+          case "Delete":
+          case "Backspace": {
+            const prevActive = activeIds();
+            setActiveIds([]);
+            setActiveBox(null);
+            removeNodes(prevActive);
+            break;
+          }
+          default:
+            return;
+        }
       }
-    }
+
+      keydown = true;
+      e.preventDefault();
+    };
+    document.addEventListener("keyup", handleUp);
+    document.addEventListener("keydown", handleDown);
+    onCleanup(() => {
+      document.removeEventListener("keyup", handleUp);
+      document.removeEventListener("keydown", handleDown);
+    });
   });
 
   return (
@@ -344,6 +473,10 @@ export function Canvas() {
       classList={{
         "w-full h-full relative overflow-hidden": true,
         "cursor-grabbing": panning(),
+      }}
+      onPointerMove={(e) => {
+        const coords = toCanvasCoords(e.clientX, e.clientY);
+        setMouseCoords(coords);
       }}
       onPointerDown={(e) => {
         if (e.button === 0) {
@@ -445,6 +578,9 @@ export function Canvas() {
         }}
       >
         <Toolbox parentDiv={parentDiv!} setActiveBox={setActiveBox} />
+        <div class="absolute bottom-4 right-4 text-gray-100 text-sm font-mono select-none pointer-events-none">
+          {Math.round(mouseCoords().x)}, {Math.round(mouseCoords().y)}
+        </div>
         <div
           class="absolute"
           style={{

@@ -106,8 +106,8 @@ export const SvgStringNode = {
   },
   function: (inputs) => {
     if (!inputs.string) return null;
-    return fromHtml(inputs.string, { space: "svg", fragment: true })
-      .children[0];
+    const clean = inputs.string.trim().replaceAll("\n", "");
+    return fromHtml(clean, { space: "svg", fragment: true }).children[0];
   },
 } satisfies NodeDef;
 

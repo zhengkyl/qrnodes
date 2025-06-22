@@ -35,6 +35,8 @@ export const NodesContext = createContext<{
   loadStateFrom: (projectName: string) => void;
   loadState: (nodes: any[]) => void;
   getStateString: () => any;
+  showSaveModal: Accessor<boolean>;
+  setShowSaveModal: Setter<boolean>;
 }>();
 
 export function NodesContextProvider(props: { children: JSX.Element }) {
@@ -203,6 +205,8 @@ export function NodesContextProvider(props: { children: JSX.Element }) {
     });
   });
 
+  const [showSaveModal, setShowSaveModal] = createSignal(false);
+
   return (
     <NodesContext.Provider
       value={{
@@ -221,6 +225,8 @@ export function NodesContextProvider(props: { children: JSX.Element }) {
         loadState,
         loadStateFrom,
         getStateString,
+        showSaveModal,
+        setShowSaveModal,
       }}
     >
       {props.children}
