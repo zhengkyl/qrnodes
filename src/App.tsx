@@ -1,17 +1,21 @@
-import { unwrap } from "solid-js/store";
-import { Panels } from "./components/Panels";
+import { createSignal } from "solid-js";
 import {
   NodesContextProvider,
   useNodesContext,
 } from "./components/context/NodesContext";
-import { batch, createSignal } from "solid-js";
-import type { NodeInfo } from "./components/nodes/shared";
-import { SaveProjectModal } from "./components/ui/SaveProjectModal";
-import { LoadProjectModal } from "./components/ui/LoadProjectModal";
+import { LoadProjectModal } from "./components/LoadProjectModal";
+import { Panels } from "./components/Panels";
+import { SaveProjectModal } from "./components/SaveProjectModal";
 
 function AppWithContext() {
-  const { nodes, setNodes, setActiveIds, setNextNodeId, displayId, currentProjectName, saveCurrentState } =
-    useNodesContext();
+  const {
+    nodes,
+    displayId,
+    currentProjectName,
+    saveState,
+    loadState,
+    getStateString,
+  } = useNodesContext();
 
   const [showSaveModal, setShowSaveModal] = createSignal(false);
   const [showLoadModal, setShowLoadModal] = createSignal(false);
@@ -32,70 +36,14 @@ function AppWithContext() {
       <div class="flex gap-4 px-2">
         <h1>qrnodes</h1>
         <a href="https://github.com/zhengkyl/qrnodes">source code</a>
-        <button
-          onClick={async () => {
-            const success = await saveCurrentState();
-            if (!success) {
-              setShowSaveModal(true); // Fallback to save as if no current project
-            }
-          }}
-          disabled={!currentProjectName()}
-        >
-          save{currentProjectName() ? ` (${currentProjectName()})` : ''}
+        <button onClick={saveState} disabled={currentProjectName() == null}>
+          save {currentProjectName() ?? ""}
         </button>
-        <button
-          onClick={() => setShowSaveModal(true)}
-        >
-          save as
-        </button>
-        <button
-          onClick={() => setShowLoadModal(true)}
-        >
-          load
-        </button>
+        <button onClick={() => setShowSaveModal(true)}>save as</button>
+        <button onClick={() => setShowLoadModal(true)}>load</button>
         <button
           onClick={() => {
-            const condensed = unwrap(nodes).filter((node) => node != null);
-            let currNode;
-            let currInputs;
-            let currInputArray;
-            let currInputArrayItem;
-            navigator.clipboard.writeText(
-              JSON.stringify(condensed, function (key, v) {
-                if (this === condensed) {
-                  currNode = v;
-                  return v;
-                } else if (this === currNode) {
-                  switch (key) {
-                    case "width":
-                    case "height":
-                    case "output":
-                      return undefined;
-                    case "inputs":
-                      currInputs = v;
-                      return v;
-                  }
-                } else if (this === currInputs) {
-                  currInputArray = v;
-                  return v;
-                } else if (this === currInputArray) {
-                  currInputArrayItem = v;
-                  return v;
-                } else if (this === currInputArrayItem) {
-                  switch (key) {
-                    case "cx":
-                    case "cy":
-                    case "ref":
-                      return undefined;
-                  }
-                }
-
-                if (typeof v === "number") {
-                  return Number.isInteger(v) ? v : Number(v.toFixed(3));
-                }
-                return v;
-              })
-            );
+            navigator.clipboard.writeText(getStateString());
           }}
         >
           copy state
@@ -103,20 +51,7 @@ function AppWithContext() {
         <input ref={input} placeholder="Paste state here..." />
         <button
           onClick={() => {
-            batch(() => {
-              setActiveIds([]);
-              setNodes([]);
-            });
-            const condensed = JSON.parse(input.value);
-            const expanded: NodeInfo[] = [];
-            let maxId = 0;
-            condensed.forEach((node) => {
-              if (node.id > maxId) maxId = node.id;
-              node.output = {};
-              expanded[node.id] = node;
-            });
-            setNodes(expanded);
-            setNextNodeId(maxId + 1);
+            loadState(JSON.parse(input.value));
             input.value = "";
           }}
         >
@@ -131,20 +66,8 @@ function AppWithContext() {
         </button>
       </div>
       <Panels />
-      <SaveProjectModal
-        isOpen={showSaveModal()}
-        onClose={() => setShowSaveModal(false)}
-        onSave={() => {
-          console.log("Project saved successfully");
-        }}
-      />
-      <LoadProjectModal
-        isOpen={showLoadModal()}
-        onClose={() => setShowLoadModal(false)}
-        onLoad={() => {
-          console.log("Project loaded successfully");
-        }}
-      />
+      <SaveProjectModal open={showSaveModal()} setOpen={setShowSaveModal} />
+      <LoadProjectModal open={showLoadModal()} setOpen={setShowLoadModal} />
     </div>
   );
 }

@@ -79,6 +79,46 @@ export const ApplyFilterNode = {
   },
 } satisfies NodeDef;
 
+export const CombineSVGsNode = {
+  title: "Combine SVGs",
+  inputsDef: {
+    svgs: {
+      type: "hast",
+      label: "SVG AST",
+      array: true,
+    },
+  },
+  outputDef: {
+    type: "hast",
+    label: "Output",
+  },
+  function: (inputs) => {
+    const svgs = inputs.svgs.filter((s) => s != null);
+    if (svgs.length === 0) return null;
+    if (svgs.length === 1) return svgs[0];
+
+    const root = structuredClone(inputs.svgs[0]);
+    let defs = root.children.find((child) => child.tagName === "defs");
+    if (defs == null) {
+      defs = s("defs");
+      root.children.unshift(defs);
+    }
+
+    for (let i = 1; i < svgs.length; i++) {
+      const svg = svgs[i];
+      const nextDefs = svg.children.find((child) => child.tagName === "defs");
+      if (nextDefs != null && nextDefs.children != null) {
+        defs.push(...nextDefs.children);
+      }
+      const nextChildren = svg.children.filter(
+        (child) => child.tagName !== "defs"
+      );
+      root.children.push(...nextChildren);
+    }
+    return root;
+  },
+} satisfies NodeDef;
+
 export const SourceNode = {
   title: "Source",
   inputsDef: {
@@ -341,11 +381,17 @@ export const ComponentTransferFuncNode = {
       type: "number",
       label: "slope",
       initialValue: 1,
+      props: {
+        step: 0.1,
+      },
       condition: (node) => node.inputs.type[0].value === "linear",
     },
     intercept: {
       type: "number",
       label: "intercept",
+      props: {
+        step: 0.1,
+      },
       condition: (node) => node.inputs.type[0].value === "linear",
     },
     amplitude: {
